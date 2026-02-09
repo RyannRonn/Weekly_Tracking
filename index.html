@@ -929,11 +929,16 @@ function renderSpotify(container, date, prevDate) {
   // WOW% 차트
   html += `<div class="chart-card"><div class="chart-title">주간 증감률 TOP 10</div><div class="chart-wrap"><canvas id="spWow"></canvas></div></div>`;
 
-  // 추이 차트 (HYBE)
+  // 추이 차트
   const fourWeekGroups = ['HYBE', 'JYP', 'SM', 'YG+'];
   const groupEmojis = { HYBE: '🏢', JYP: '🎭', SM: '🌟', 'YG+': '🐻' };
+  const spIdx = WEEKLY_DATES.indexOf(date);
+  const sp4Start = spIdx >= 4 ? WEEKLY_DATES[spIdx - 4] : WEEKLY_DATES[0];
+  const sp4sD = new Date(sp4Start);
+  const sp4eD = new Date(date);
+  const sp4Range = `${sp4sD.getMonth()+1}/${sp4sD.getDate()} ~ ${sp4eD.getMonth()+1}/${sp4eD.getDate()}`;
   fourWeekGroups.forEach(g => {
-    html += `<div class="chart-card"><div class="chart-title">${groupEmojis[g] || ''} ${g} 4주간 월간 청취자 수 증감 (만)</div><div class="chart-wrap" style="height:260px"><canvas id="sp4w_${g}"></canvas></div></div>`;
+    html += `<div class="chart-card"><div class="chart-title">${groupEmojis[g] || ''} ${g} 월간 청취자 수 증감 (${sp4Range}, 만)</div><div class="chart-wrap" style="height:260px"><canvas id="sp4w_${g}"></canvas></div></div>`;
   });
   
   html += '</div>';
@@ -981,9 +986,9 @@ function renderSpotify(container, date, prevDate) {
   }
 
   // WOW% 차트
-  const wowSorted = artists.filter(a => current[a].wow != null && !globalSet.has(a))
+  const wowSorted = artists.filter(a => current[a].wow != null && current[a].wow > 0 && !globalSet.has(a))
     .map(a => ({name: a, wow: current[a].wow}))
-    .sort((a,b) => Math.abs(b.wow) - Math.abs(a.wow)).slice(0, 10);
+    .sort((a,b) => b.wow - a.wow).slice(0, 10);
   charts.spWow = new Chart(document.getElementById('spWow'), {
     type: 'bar',
     data: {
@@ -1002,11 +1007,7 @@ function renderSpotify(container, date, prevDate) {
   // 그룹별 4주 증감 차트 (선택 날짜 기준 동적 계산)
   const spDateIdx = WEEKLY_DATES.indexOf(date);
   const sp4wDates = spDateIdx >= 4 ? WEEKLY_DATES.slice(spDateIdx - 4, spDateIdx + 1) : WEEKLY_DATES.slice(0, Math.min(5, WEEKLY_DATES.length));
-  const weekLabels = sp4wDates.slice(1).map((d, i) => {
-    const prev = new Date(sp4wDates[i]);
-    const curr = new Date(d);
-    return `${prev.getMonth()+1}/${prev.getDate()}~${curr.getMonth()+1}/${curr.getDate()}`;
-  });
+  const weekLabels = ['W-3', 'W-2', 'W-1', 'W0'].slice(-Math.max(0, sp4wDates.length - 1));
   const barColors = ['#3b82f6','#f59e0b','#a78bfa','#10b981','#f472b6','#22d3ee','#ef4444','#06b6d4','#84cc16','#e879f9','#fb923c','#14b8a6'];
   
   fourWeekGroups.forEach(g => {
@@ -1207,7 +1208,7 @@ function renderTiktok(container, category, date, prevDate) {
   }
 
   // WOW
-  const wowSorted = sorted.filter(s => s.wow != null && (category !== 'idol' || !idolGlobalSet.has(s.name))).sort((a,b) => Math.abs(b.wow) - Math.abs(a.wow)).slice(0, 10);
+  const wowSorted = sorted.filter(s => s.wow != null && s.wow > 0 && (category !== 'idol' || !idolGlobalSet.has(s.name))).sort((a,b) => b.wow - a.wow).slice(0, 10);
   charts.ttWow = new Chart(document.getElementById('ttWow'), {
     type: 'bar',
     data: {
