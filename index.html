@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TikTok & Spotify Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0a0e17;
+  --surface: #111827;
+  --surface2: #1a2235;
+  --border: #1e2d4a;
+  --text: #e2e8f0;
+  --text-dim: #64748b;
+  --accent: #3b82f6;
+  --green: #10b981;
+  --red: #ef4444;
+  --orange: #f59e0b;
+  --purple: #a78bfa;
+  --pink: #f472b6;
+  --cyan: #22d3ee;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans KR', sans-serif;
+  min-height: 100vh;
+}
+
+.header {
+  text-align: center;
+  padding: 40px 20px 20px;
+  position: relative;
+}
+.header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+.date-display {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 2.8rem;
+  font-weight: 700;
+  letter-spacing: -1px;
+  background: linear-gradient(135deg, #fff, #94a3b8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.subtitle {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  margin-top: 4px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+}
+
+.nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 24px auto 0;
+  flex-wrap: wrap;
+}
+.nav-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+.nav-btn:hover { background: var(--surface2); border-color: var(--accent); }
+.nav-btn.today { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+.nav-btn.today:hover { background: #2563eb; }
+.date-input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.date-input::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
+
+.tab-bar {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: 28px auto 0;
+  flex-wrap: wrap;
+  max-width: 900px;
+}
+.tab {
+  padding: 10px 20px;
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.25s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tab:hover { border-color: var(--accent); color: var(--text); }
+.tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+.tab .emoji { font-size: 1rem; }
+.tab .count {
+  background: rgba(255,255,255,0.2);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+.tab.active .count { background: rgba(255,255,255,0.3); }
+
+.container { max-width: 1400px; margin: 0 auto; padding: 28px 20px; }
+
+.section { display: none; }
+.section.active { display: block; }
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 20px;
+  margin-bottom: 28px;
+}
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  transition: border-color 0.2s;
+}
+.chart-card:hover { border-color: var(--accent); }
+.chart-title {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.chart-wrap { position: relative; height: 220px; }
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.data-table thead th {
+  background: var(--surface2);
+  color: var(--text-dim);
+  padding: 10px 12px;
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  border-bottom: 1px solid var(--border);
+}
+.data-table thead th:first-child { text-align: left; border-radius: 8px 0 0 0; }
+.data-table thead th:last-child { border-radius: 0 8px 0 0; }
+.data-table tbody td {
+  padding: 8px 12px;
+  text-align: right;
+  border-bottom: 1px solid rgba(30,45,74,0.4);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+}
+.data-table tbody td:first-child {
+  text-align: left;
+  color: var(--text);
+  font-weight: 500;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+.data-table tbody tr:hover { background: rgba(59,130,246,0.05); }
+.wow-pos { color: var(--green); }
+.wow-neg { color: var(--red); }
+.wow-zero { color: var(--text-dim); }
+
+.table-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.table-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.table-header h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.table-scroll { overflow-x: auto; max-height: 500px; overflow-y: auto; }
+
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+.badge-weekly { background: rgba(59,130,246,0.15); color: var(--accent); }
+.badge-daily { background: rgba(16,185,129,0.15); color: var(--green); }
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-dim);
+}
+.empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+
+/* Search */
+.search-wrap {
+  position: relative;
+  margin: 16px auto 0;
+  max-width: 480px;
+}
+.search-input {
+  width: 100%;
+  padding: 12px 44px 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 0.95rem;
+  font-family: 'Noto Sans KR', sans-serif;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.search-input:focus { border-color: var(--accent); }
+.search-input::placeholder { color: var(--text-dim); }
+.search-icon {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-dim);
+  font-size: 1.1rem;
+  pointer-events: none;
+}
+.search-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  max-height: 260px;
+  overflow-y: auto;
+  z-index: 100;
+  display: none;
+}
+.search-suggestions.show { display: block; }
+.search-suggestion {
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.15s;
+}
+.search-suggestion:hover { background: var(--surface2); }
+.search-suggestion .cat-badge {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: var(--surface2);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.search-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  margin-bottom: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+.search-back:hover { border-color: var(--accent); color: var(--text); }
+.search-result-title {
+  font-size: 1.6rem;
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+.search-result-cat {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin-bottom: 24px;
+}
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.summary-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+.summary-card .label {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.summary-card .value {
+  font-size: 1.4rem;
+  font-weight: 900;
+  font-family: 'JetBrains Mono', monospace;
+}
+.summary-card .sub {
+  font-size: 0.75rem;
+  margin-top: 4px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.search-section {
+  margin-bottom: 32px;
+}
+.search-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.search-chart-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  height: 300px;
+  position: relative;
+}
+
+@media (max-width: 768px) {
+  .date-display { font-size: 1.8rem; }
+  .chart-grid { grid-template-columns: 1fr; }
+  .nav-bar { gap: 4px; }
+  .nav-btn { padding: 8px 12px; font-size: 0.8rem; }
+  .summary-cards { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="date-display" id="dateDisplay"></div>
+  <div class="subtitle">TikTok & Spotify Tracker</div>
+  <div class="nav-bar">
+    <button class="nav-btn" onclick="navigate(-1)">← 이전 주</button>
+    <input type="date" class="date-input" id="dateInput" onchange="jumpToDate(this.value)">
+    <button class="nav-btn" onclick="navigate(1)">다음 주 →</button>
+    <button class="nav-btn today" onclick="goLatest()">최신</button>
+  </div>
+  <div class="search-wrap" id="searchWrap">
+    <input type="text" class="search-input" id="searchInput" placeholder="검색 (예: medicube, bts, buldak...)" autocomplete="off">
+    <span class="search-icon">🔍</span>
+    <div class="search-suggestions" id="searchSuggestions"></div>
+  </div>
+  <div class="tab-bar" id="tabBar"></div>
+</div>
+
+<div class="container" id="content"></div>
+
+<script>
+const DATA = {"spotify": {"2025-11-24": {"BTS": {"value": 2391.0, "wow": -0.0097}, "Jung Kook": {"value": 1622.1, "wow": -0.0018}, "Seventeen": {"value": 561.0, "wow": -0.021}, "Newjeans": {"value": 1402.0, "wow": 0.0013}, "Le sserafim": {"value": 1727.0, "wow": 0.0403}, "TXT": {"value": 666.3, "wow": -0.019}, "Enhypen": {"value": 939.3, "wow": -0.0066}, "BoyNextDoor": {"value": 330.3, "wow": 0.0045}, "TWS": {"value": 189.8, "wow": -0.0559}, "illit": {"value": 1050.0, "wow": -0.0047}, "캣츠아이": {"value": 3382.7, "wow": 0.0058}, "CORTIS": {"value": 690.4, "wow": 0.0079}, "StrayKids": {"value": 1253.9, "wow": 0.0547}, "Twice": {"value": 2354.4, "wow": -0.0297}, "NMIXX": {"value": 419.4, "wow": -0.0396}, "ITZY": {"value": 429.9, "wow": 0.0465}, "Kickflip": {"value": 46.8, "wow": -0.0471}, "Riize": {"value": 206.8, "wow": -0.0011}, "에스파": {"value": 978.6, "wow": 0.0038}, "NCTDREAM": {"value": 255.7, "wow": 0.0755}, "NCT127": {"value": 249.6, "wow": -0.0017}, "Hearts2hearts": {"value": 395.5, "wow": -0.0281}, "BlackPink": {"value": 2631.1, "wow": -0.0173}, "Treasure": {"value": 193.9, "wow": -0.0233}, "Babymonster": {"value": 727.5, "wow": -0.0255}, "Alldayproject": {"value": 266.2, "wow": 0.2081}, "ROSE": {"value": 3224.4, "wow": -0.0289}, "여자아이들": {"value": 669.8, "wow": -0.0117}, "TaylorSwift": {"value": 10529.9, "wow": -0.0158}, "the Weeknd": {"value": 12286.7, "wow": -0.0026}, "Adele": {"value": 5699.5, "wow": -0.0004}, "Dua Lipa": {"value": 6174.1, "wow": 0.0029}, "Sam Smith": {"value": 5288.6, "wow": -0.0113}, "Bruno Mars": {"value": 11422.3, "wow": -0.0056}, "ariana grande": {"value": 9362.7, "wow": 0.0665}, "Sabrina Caprter": {"value": 7264.2, "wow": -0.0043}}, "2025-12-01": {"BTS": {"value": 2380.6, "wow": -0.0043}, "Jung Kook": {"value": 1627.1, "wow": 0.0031}, "Seventeen": {"value": 545.3, "wow": -0.028}, "Newjeans": {"value": 1405.8, "wow": 0.0028}, "Le sserafim": {"value": 1728.0, "wow": 0.0006}, "TXT": {"value": 648.7, "wow": -0.0265}, "Enhypen": {"value": 930.4, "wow": -0.0095}, "BoyNextDoor": {"value": 314.5, "wow": -0.0478}, "TWS": {"value": 180.5, "wow": -0.049}, "illit": {"value": 1110.4, "wow": 0.0575}, "캣츠아이": {"value": 3370.6, "wow": -0.0036}, "CORTIS": {"value": 700.0, "wow": 0.0139}, "StrayKids": {"value": 1382.3, "wow": 0.1024}, "Twice": {"value": 2258.2, "wow": -0.0409}, "NMIXX": {"value": 410.6, "wow": -0.0212}, "ITZY": {"value": 448.9, "wow": 0.0442}, "Kickflip": {"value": 47.3, "wow": 0.0114}, "Riize": {"value": 250.1, "wow": 0.2095}, "에스파": {"value": 996.4, "wow": 0.0183}, "NCTDREAM": {"value": 275.7, "wow": 0.078}, "NCT127": {"value": 248.4, "wow": -0.0051}, "Hearts2hearts": {"value": 374.0, "wow": -0.0544}, "BlackPink": {"value": 2592.8, "wow": -0.0145}, "Treasure": {"value": 188.7, "wow": -0.0269}, "Babymonster": {"value": 716.5, "wow": -0.0152}, "Alldayproject": {"value": 332.3, "wow": 0.2485}, "ROSE": {"value": 3077.2, "wow": -0.0457}, "여자아이들": {"value": 662.2, "wow": -0.0113}, "TaylorSwift": {"value": 10537.9, "wow": 0.0008}, "the Weeknd": {"value": 12092.3, "wow": -0.0158}, "Adele": {"value": 5682.3, "wow": -0.003}, "Dua Lipa": {"value": 6179.8, "wow": 0.0009}, "Sam Smith": {"value": 5247.9, "wow": -0.0077}, "Bruno Mars": {"value": 11444.7, "wow": 0.002}, "ariana grande": {"value": 10088.5, "wow": 0.0775}, "Sabrina Caprter": {"value": 7345.7, "wow": 0.0112}}, "2025-12-08": {"BTS": {"value": 2384.0, "wow": 0.0014}, "Jung Kook": {"value": 1626.5, "wow": -0.0004}, "Seventeen": {"value": 543.0, "wow": -0.0042}, "Newjeans": {"value": 1408.2, "wow": 0.0017}, "Le sserafim": {"value": 1714.5, "wow": -0.0078}, "TXT": {"value": 644.8, "wow": -0.0059}, "Enhypen": {"value": 938.8, "wow": 0.0091}, "BoyNextDoor": {"value": 307.5, "wow": -0.022}, "TWS": {"value": 176.9, "wow": -0.0197}, "illit": {"value": 1206.8, "wow": 0.0868}, "캣츠아이": {"value": 3348.0, "wow": -0.0067}, "CORTIS": {"value": 732.9, "wow": 0.047}, "StrayKids": {"value": 1411.2, "wow": 0.0209}, "Twice": {"value": 2181.2, "wow": -0.0341}, "NMIXX": {"value": 401.5, "wow": -0.022}, "ITZY": {"value": 463.4, "wow": 0.0322}, "Kickflip": {"value": 47.9, "wow": 0.0119}, "Riize": {"value": 289.7, "wow": 0.1584}, "에스파": {"value": 1012.6, "wow": 0.0162}, "NCTDREAM": {"value": 288.2, "wow": 0.0454}, "NCT127": {"value": 246.8, "wow": -0.0064}, "Hearts2hearts": {"value": 372.5, "wow": -0.0041}, "BlackPink": {"value": 2555.6, "wow": -0.0144}, "Treasure": {"value": 190.6, "wow": 0.0102}, "Babymonster": {"value": 720.2, "wow": 0.0051}, "Alldayproject": {"value": 366.2, "wow": 0.1019}, "ROSE": {"value": 3117.2, "wow": 0.013}, "여자아이들": {"value": 656.9, "wow": -0.008}, "TaylorSwift": {"value": 10653.3, "wow": 0.011}, "the Weeknd": {"value": 12038.6, "wow": -0.0044}, "Adele": {"value": 5676.0, "wow": -0.0011}, "Dua Lipa": {"value": 6217.3, "wow": 0.0061}, "Sam Smith": {"value": 5271.8, "wow": 0.0045}, "Bruno Mars": {"value": 11460.1, "wow": 0.0013}, "ariana grande": {"value": 10763.3, "wow": 0.0669}, "Sabrina Caprter": {"value": 7527.8, "wow": 0.0248}}, "2025-12-15": {"BTS": {"value": 2397.6, "wow": 0.0057}, "Jung Kook": {"value": 1629.0, "wow": 0.0015}, "Seventeen": {"value": 545.3, "wow": 0.0042}, "Newjeans": {"value": 1410.2, "wow": 0.0014}, "Le sserafim": {"value": 1689.4, "wow": -0.0146}, "TXT": {"value": 639.1, "wow": -0.0089}, "Enhypen": {"value": 950.0, "wow": 0.0119}, "BoyNextDoor": {"value": 298.2, "wow": -0.0305}, "TWS": {"value": 179.0, "wow": 0.0116}, "illit": {"value": 1290.9, "wow": 0.0697}, "캣츠아이": {"value": 3329.9, "wow": -0.0054}, "CORTIS": {"value": 758.7, "wow": 0.0351}, "StrayKids": {"value": 1381.2, "wow": -0.0212}, "Twice": {"value": 2129.8, "wow": -0.0236}, "NMIXX": {"value": 394.1, "wow": -0.0185}, "ITZY": {"value": 460.7, "wow": -0.0058}, "Kickflip": {"value": 48.3, "wow": 0.0087}, "Riize": {"value": 306.4, "wow": 0.0575}, "에스파": {"value": 1014.8, "wow": 0.0021}, "NCTDREAM": {"value": 298.9, "wow": 0.0373}, "NCT127": {"value": 247.1, "wow": 0.0012}, "Hearts2hearts": {"value": 376.8, "wow": 0.0116}, "BlackPink": {"value": 2526.1, "wow": -0.0115}, "Treasure": {"value": 189.3, "wow": -0.0068}, "Babymonster": {"value": 728.7, "wow": 0.0118}, "Alldayproject": {"value": 402.8, "wow": 0.0999}, "ROSE": {"value": 3162.3, "wow": 0.0145}, "여자아이들": {"value": 652.0, "wow": -0.0075}, "TaylorSwift": {"value": 10765.9, "wow": 0.0106}, "the Weeknd": {"value": 12019.4, "wow": -0.0016}, "Adele": {"value": 5656.1, "wow": -0.0035}, "Dua Lipa": {"value": 6229.9, "wow": 0.002}, "Sam Smith": {"value": 5309.0, "wow": 0.0071}, "Bruno Mars": {"value": 11467.9, "wow": 0.0007}, "ariana grande": {"value": 11197.7, "wow": 0.0404}, "Sabrina Caprter": {"value": 7670.8, "wow": 0.019}}, "2025-12-22": {"BTS": {"value": 2421.5, "wow": 0.01}, "Jung Kook": {"value": 1621.4, "wow": -0.0046}, "Seventeen": {"value": 543.9, "wow": -0.0025}, "Newjeans": {"value": 1409.3, "wow": -0.0007}, "Le sserafim": {"value": 1643.1, "wow": -0.0274}, "TXT": {"value": 631.4, "wow": -0.012}, "Enhypen": {"value": 951.5, "wow": 0.0015}, "BoyNextDoor": {"value": 288.6, "wow": -0.0322}, "TWS": {"value": 188.8, "wow": 0.055}, "illit": {"value": 1397.3, "wow": 0.0824}, "캣츠아이": {"value": 3276.5, "wow": -0.0161}, "CORTIS": {"value": 786.3, "wow": 0.0364}, "StrayKids": {"value": 1339.8, "wow": -0.03}, "Twice": {"value": 2057.0, "wow": -0.0342}, "NMIXX": {"value": 386.2, "wow": -0.02}, "ITZY": {"value": 444.2, "wow": -0.0359}, "Kickflip": {"value": 48.1, "wow": -0.0054}, "Riize": {"value": 322.4, "wow": 0.0522}, "에스파": {"value": 999.1, "wow": -0.0154}, "NCTDREAM": {"value": 294.8, "wow": -0.0137}, "NCT127": {"value": 246.1, "wow": -0.0042}, "Hearts2hearts": {"value": 383.3, "wow": 0.0174}, "BlackPink": {"value": 2488.2, "wow": -0.015}, "Treasure": {"value": 186.5, "wow": -0.0148}, "Babymonster": {"value": 735.7, "wow": 0.0096}, "Alldayproject": {"value": 415.5, "wow": 0.0316}, "ROSE": {"value": 3199.1, "wow": 0.0116}, "여자아이들": {"value": 641.9, "wow": -0.0154}, "TaylorSwift": {"value": 10952.9, "wow": 0.0174}, "the Weeknd": {"value": 11997.3, "wow": -0.0018}, "Adele": {"value": 5575.0, "wow": -0.0143}, "Dua Lipa": {"value": 6222.0, "wow": -0.0013}, "Sam Smith": {"value": 5377.1, "wow": 0.0128}, "Bruno Mars": {"value": 11389.2, "wow": -0.0069}, "ariana grande": {"value": 11690.7, "wow": 0.044}, "Sabrina Caprter": {"value": 7865.8, "wow": 0.0254}}, "2025-12-29": {"BTS": {"value": 2430.1, "wow": 0.0035}, "Jung Kook": {"value": 1607.3, "wow": -0.0087}, "Seventeen": {"value": 541.8, "wow": -0.0039}, "Newjeans": {"value": 1421.9, "wow": 0.0089}, "Le sserafim": {"value": 1642.3, "wow": -0.0005}, "TXT": {"value": 623.3, "wow": -0.0129}, "Enhypen": {"value": 956.0, "wow": 0.0048}, "BoyNextDoor": {"value": 289.5, "wow": 0.0033}, "TWS": {"value": 202.3, "wow": 0.0714}, "illit": {"value": 1476.4, "wow": 0.0566}, "캣츠아이": {"value": 3253.7, "wow": -0.0069}, "CORTIS": {"value": 806.2, "wow": 0.0253}, "StrayKids": {"value": 1278.0, "wow": -0.0462}, "Twice": {"value": 2038.1, "wow": -0.0092}, "NMIXX": {"value": 375.4, "wow": -0.0279}, "ITZY": {"value": 427.2, "wow": -0.0382}, "Kickflip": {"value": 47.8, "wow": -0.0064}, "Riize": {"value": 307.3, "wow": -0.0467}, "에스파": {"value": 979.6, "wow": -0.0195}, "NCTDREAM": {"value": 286.6, "wow": -0.0279}, "NCT127": {"value": 244.8, "wow": -0.0051}, "Hearts2hearts": {"value": 391.2, "wow": 0.0206}, "BlackPink": {"value": 2438.3, "wow": -0.0201}, "Treasure": {"value": 184.7, "wow": -0.0097}, "Babymonster": {"value": 748.0, "wow": 0.0168}, "Alldayproject": {"value": 404.1, "wow": -0.0275}, "ROSE": {"value": 3258.3, "wow": 0.0185}, "여자아이들": {"value": 637.7, "wow": -0.0066}, "TaylorSwift": {"value": 11323.4, "wow": 0.0338}, "the Weeknd": {"value": 12030.2, "wow": 0.0027}, "Adele": {"value": 5540.1, "wow": -0.0063}, "Dua Lipa": {"value": 6249.1, "wow": 0.0044}, "Sam Smith": {"value": 5525.5, "wow": 0.0276}, "Bruno Mars": {"value": 11284.0, "wow": -0.0092}, "ariana grande": {"value": 12664.3, "wow": 0.0833}, "Sabrina Caprter": {"value": 8381.1, "wow": 0.0655}}, "2026-01-05": {"BTS": {"value": 2447.9, "wow": 0.0073}, "Jung Kook": {"value": 1598.3, "wow": -0.0056}, "Seventeen": {"value": 533.5, "wow": -0.0153}, "Newjeans": {"value": 1456.6, "wow": 0.0245}, "Le sserafim": {"value": 1642.8, "wow": 0.0004}, "TXT": {"value": 617.3, "wow": -0.0097}, "Enhypen": {"value": 951.7, "wow": -0.0046}, "BoyNextDoor": {"value": 289.8, "wow": 0.001}, "TWS": {"value": 216.3, "wow": 0.0693}, "illit": {"value": 1550.8, "wow": 0.0504}, "캣츠아이": {"value": 3410.9, "wow": 0.0483}, "CORTIS": {"value": 817.7, "wow": 0.0142}, "StrayKids": {"value": 1225.8, "wow": -0.0409}, "Twice": {"value": 2008.9, "wow": -0.0143}, "NMIXX": {"value": 369.7, "wow": -0.0152}, "ITZY": {"value": 413.2, "wow": -0.0327}, "Kickflip": {"value": 48.8, "wow": 0.0216}, "Riize": {"value": 283.8, "wow": -0.0766}, "에스파": {"value": 965.1, "wow": -0.0149}, "NCTDREAM": {"value": 278.9, "wow": -0.0267}, "NCT127": {"value": 244.8, "wow": 0.0001}, "Hearts2hearts": {"value": 396.3, "wow": 0.0129}, "BlackPink": {"value": 2441.2, "wow": 0.0012}, "Treasure": {"value": 181.8, "wow": -0.0157}, "Babymonster": {"value": 760.9, "wow": 0.0172}, "Alldayproject": {"value": 405.3, "wow": 0.003}, "ROSE": {"value": 3457.1, "wow": 0.061}, "제니": {"value": 4280.0, "wow": null}, "여자아이들": {"value": 634.3, "wow": -0.0054}, "TaylorSwift": {"value": 11401.7, "wow": 0.0069}, "the Weeknd": {"value": 12208.7, "wow": 0.0148}, "Adele": {"value": 5537.4, "wow": -0.0005}, "Dua Lipa": {"value": 6471.6, "wow": 0.0356}, "Sam Smith": {"value": 5492.0, "wow": -0.0061}, "Bruno Mars": {"value": 11478.6, "wow": 0.0172}, "ariana grande": {"value": 12386.8, "wow": -0.0219}, "Sabrina Caprter": {"value": 8377.0, "wow": -0.0005}}, "2026-01-12": {"BTS": {"value": 2499.3, "wow": 0.021}, "Jung Kook": {"value": 1606.5, "wow": 0.0051}, "Seventeen": {"value": 530.8, "wow": -0.0051}, "Newjeans": {"value": 1480.3, "wow": 0.0162}, "Le sserafim": {"value": 1686.4, "wow": 0.0265}, "TXT": {"value": 620.8, "wow": 0.0057}, "Enhypen": {"value": 954.1, "wow": 0.0025}, "BoyNextDoor": {"value": 289.9, "wow": 0.0004}, "TWS": {"value": 234.4, "wow": 0.0835}, "illit": {"value": 1623.0, "wow": 0.0465}, "캣츠아이": {"value": 3575.6, "wow": 0.0483}, "CORTIS": {"value": 829.8, "wow": 0.0148}, "StrayKids": {"value": 1196.6, "wow": -0.0238}, "Twice": {"value": 1990.4, "wow": -0.0092}, "NMIXX": {"value": 373.5, "wow": 0.0105}, "ITZY": {"value": 411.8, "wow": -0.0034}, "Kickflip": {"value": 50.6, "wow": 0.0383}, "Riize": {"value": 278.2, "wow": -0.0197}, "에스파": {"value": 973.9, "wow": 0.0092}, "NCTDREAM": {"value": 274.5, "wow": -0.0161}, "NCT127": {"value": 246.3, "wow": 0.006}, "Hearts2hearts": {"value": 402.3, "wow": 0.0153}, "BlackPink": {"value": 2428.4, "wow": -0.0053}, "Treasure": {"value": 182.1, "wow": 0.0016}, "Babymonster": {"value": 775.0, "wow": 0.0186}, "Alldayproject": {"value": 398.0, "wow": -0.0181}, "ROSE": {"value": 3457.0, "wow": -0.0}, "제니": {"value": 4257.0, "wow": -0.0054}, "여자아이들": {"value": 640.6, "wow": 0.01}, "TaylorSwift": {"value": 11374.5, "wow": -0.0024}, "the Weeknd": {"value": 12257.2, "wow": 0.004}, "Adele": {"value": 5579.9, "wow": 0.0077}, "Dua Lipa": {"value": 6534.6, "wow": 0.0097}, "Sam Smith": {"value": 5448.1, "wow": -0.008}, "Bruno Mars": {"value": 11750.0, "wow": 0.0236}, "ariana grande": {"value": 11920.8, "wow": -0.0376}, "Sabrina Caprter": {"value": 8197.2, "wow": -0.0215}}, "2026-01-19": {"BTS": {"value": 2638.7, "wow": 0.0558}, "Jung Kook": {"value": 1651.4, "wow": 0.028}, "Seventeen": {"value": 532.1, "wow": 0.0025}, "Newjeans": {"value": 1494.3, "wow": 0.0095}, "Le sserafim": {"value": 1718.7, "wow": 0.0192}, "TXT": {"value": 627.7, "wow": 0.0112}, "Enhypen": {"value": 987.1, "wow": 0.0347}, "BoyNextDoor": {"value": 287.4, "wow": -0.0087}, "TWS": {"value": 251.7, "wow": 0.074}, "illit": {"value": 1667.6, "wow": 0.0275}, "캣츠아이": {"value": 3693.7, "wow": 0.033}, "CORTIS": {"value": 836.6, "wow": 0.0082}, "StrayKids": {"value": 1177.3, "wow": -0.0162}, "Twice": {"value": 1978.7, "wow": -0.0059}, "NMIXX": {"value": 376.7, "wow": 0.0086}, "ITZY": {"value": 416.6, "wow": 0.0117}, "Kickflip": {"value": 55.0, "wow": 0.0868}, "Riize": {"value": 276.1, "wow": -0.0075}, "에스파": {"value": 978.4, "wow": 0.0046}, "NCTDREAM": {"value": 271.5, "wow": -0.0109}, "NCT127": {"value": 248.8, "wow": 0.0102}, "Hearts2hearts": {"value": 402.9, "wow": 0.0013}, "BlackPink": {"value": 2429.9, "wow": 0.0006}, "Treasure": {"value": 183.5, "wow": 0.008}, "Babymonster": {"value": 785.1, "wow": 0.013}, "Alldayproject": {"value": 385.7, "wow": -0.0309}, "ROSE": {"value": 3478.4, "wow": 0.0062}, "제니": {"value": 4270.6, "wow": 0.0032}, "여자아이들": {"value": 652.2, "wow": 0.0181}, "TaylorSwift": {"value": 11277.4, "wow": -0.0085}, "the Weeknd": {"value": 12282.0, "wow": 0.002}, "Adele": {"value": 5664.1, "wow": 0.0151}, "Dua Lipa": {"value": 6603.1, "wow": 0.0105}, "Sam Smith": {"value": 5397.6, "wow": -0.0093}, "Bruno Mars": {"value": 12717.7, "wow": 0.0824}, "ariana grande": {"value": 11256.8, "wow": -0.0557}, "Sabrina Caprter": {"value": 7939.1, "wow": -0.0315}}, "2026-01-26": {"BTS": {"value": 2741.9, "wow": 0.0391}, "Jung Kook": {"value": 1676.0, "wow": 0.0149}, "Seventeen": {"value": 531.2, "wow": -0.0018}, "Newjeans": {"value": 1485.3, "wow": -0.0061}, "Le sserafim": {"value": 1717.4, "wow": -0.0008}, "TXT": {"value": 635.2, "wow": 0.0119}, "Enhypen": {"value": 1050.0, "wow": 0.0637}, "BoyNextDoor": {"value": 281.4, "wow": -0.0208}, "TWS": {"value": 264.2, "wow": 0.0494}, "illit": {"value": 1669.9, "wow": 0.0013}, "캣츠아이": {"value": 3733.5, "wow": 0.0108}, "CORTIS": {"value": 831.4, "wow": -0.0063}, "StrayKids": {"value": 1153.4, "wow": -0.0203}, "Twice": {"value": 1929.0, "wow": -0.0251}, "NMIXX": {"value": 374.7, "wow": -0.0053}, "ITZY": {"value": 418.0, "wow": 0.0032}, "Kickflip": {"value": 61.8, "wow": 0.1222}, "Riize": {"value": 274.2, "wow": -0.0069}, "에스파": {"value": 975.1, "wow": -0.0034}, "NCTDREAM": {"value": 266.7, "wow": -0.0174}, "NCT127": {"value": 250.0, "wow": 0.0046}, "Hearts2hearts": {"value": 398.6, "wow": -0.0106}, "BlackPink": {"value": 2431.8, "wow": 0.0008}, "Treasure": {"value": 184.8, "wow": 0.0068}, "Babymonster": {"value": 784.8, "wow": -0.0004}, "Alldayproject": {"value": 378.4, "wow": -0.0189}, "ROSE": {"value": 3444.9, "wow": -0.0096}, "제니": {"value": 4230.7, "wow": -0.0093}, "여자아이들": {"value": 660.9, "wow": 0.0133}, "TaylorSwift": {"value": 10801.3, "wow": -0.0422}, "the Weeknd": {"value": 12269.5, "wow": -0.001}, "Adele": {"value": 5717.2, "wow": 0.0094}, "Dua Lipa": {"value": 6639.5, "wow": 0.0055}, "Sam Smith": {"value": 5197.0, "wow": -0.0371}, "Bruno Mars": {"value": 13243.3, "wow": 0.0413}, "ariana grande": {"value": 9155.9, "wow": -0.1866}, "Sabrina Caprter": {"value": 7054.5, "wow": -0.1114}}, "2026-02-02": {"BTS": {"value": 2758.6, "wow": 0.0061}, "Jung Kook": {"value": 1678.3, "wow": 0.0014}, "Seventeen": {"value": 530.6, "wow": -0.0011}, "Newjeans": {"value": 1483.0, "wow": -0.0015}, "Le sserafim": {"value": 1717.0, "wow": -0.0002}, "TXT": {"value": 635.3, "wow": 0.0003}, "Enhypen": {"value": 1057.3, "wow": 0.0069}, "BoyNextDoor": {"value": 280.0, "wow": -0.005}, "TWS": {"value": 265.0, "wow": 0.0031}, "illit": {"value": 1631.9, "wow": -0.0227}, "캣츠아이": {"value": 3740.9, "wow": 0.002}, "CORTIS": {"value": 829.5, "wow": -0.0022}, "StrayKids": {"value": 1150.7, "wow": -0.0023}, "Twice": {"value": 1923.8, "wow": -0.0027}, "NMIXX": {"value": 374.3, "wow": -0.0011}, "ITZY": {"value": 417.3, "wow": -0.0016}, "Kickflip": {"value": 62.4, "wow": 0.0097}, "Riize": {"value": 273.4, "wow": -0.0029}, "에스파": {"value": 975.2, "wow": 0.0}, "NCTDREAM": {"value": 266.5, "wow": -0.001}, "NCT127": {"value": 249.6, "wow": -0.0013}, "Hearts2hearts": {"value": 397.0, "wow": -0.0041}, "BlackPink": {"value": 2429.2, "wow": -0.0011}, "Treasure": {"value": 184.8, "wow": 0.0003}, "Babymonster": {"value": 783.5, "wow": -0.0016}, "Alldayproject": {"value": 377.0, "wow": -0.0037}, "ROSE": {"value": 3440.6, "wow": -0.0013}, "제니": {"value": 4145.6, "wow": -0.0201}, "여자아이들": {"value": 660.4, "wow": -0.0008}, "TaylorSwift": {"value": 10789.9, "wow": -0.0011}, "the Weeknd": {"value": 12268.6, "wow": -0.0001}, "Adele": {"value": 5723.7, "wow": 0.0011}, "Dua Lipa": {"value": 6644.2, "wow": 0.0007}, "Sam Smith": {"value": 5197.4, "wow": 0.0001}, "Bruno Mars": {"value": 13295.8, "wow": 0.004}, "ariana grande": {"value": 9094.4, "wow": -0.0067}, "Sabrina Caprter": {"value": 7021.3, "wow": -0.0047}}, "2026-02-09": {"BTS": {"value": 2797.4, "wow": 0.0141}, "Jung Kook": {"value": 1666.5, "wow": -0.007}, "Seventeen": {"value": 522.6, "wow": -0.0151}, "Newjeans": {"value": 1417.2, "wow": -0.0444}, "Le sserafim": {"value": 1648.6, "wow": -0.0399}, "TXT": {"value": 634.9, "wow": -0.0007}, "Enhypen": {"value": 1096.9, "wow": 0.0375}, "BoyNextDoor": {"value": 267.1, "wow": -0.0459}, "TWS": {"value": 270.0, "wow": 0.0188}, "캣츠아이": {"value": 3542.4, "wow": -0.0531}, "StrayKids": {"value": 1125.4, "wow": -0.022}, "Twice": {"value": 1844.1, "wow": -0.0415}, "NMIXX": {"value": 363.1, "wow": -0.0301}, "ITZY": {"value": 407.4, "wow": -0.0237}, "Kickflip": {"value": 67.8, "wow": 0.0863}, "Riize": {"value": 267.3, "wow": -0.0224}, "에스파": {"value": 952.9, "wow": -0.0228}, "NCTDREAM": {"value": 261.6, "wow": -0.0182}, "NCT127": {"value": 250.6, "wow": 0.004}, "Hearts2hearts": {"value": 380.3, "wow": -0.0421}, "BlackPink": {"value": 2327.1, "wow": -0.042}, "Treasure": {"value": 180.9, "wow": -0.0213}, "Babymonster": {"value": 762.5, "wow": -0.0268}, "Alldayproject": {"value": 10.5, "wow": -0.972}, "ROSE": {"value": 3156.3, "wow": -0.0826}, "제니": {"value": 4217.1, "wow": 0.0173}, "여자아이들": {"value": 726.4, "wow": 0.1}, "TaylorSwift": {"value": 10562.9, "wow": -0.021}, "Adele": {"value": 5723.1, "wow": -0.0001}, "Dua Lipa": {"value": 6437.9, "wow": -0.031}, "Sam Smith": {"value": 5174.3, "wow": -0.0044}, "Bruno Mars": {"value": 13492.1, "wow": 0.0148}, "ariana grande": {"value": 8626.5, "wow": -0.0514}, "Sabrina Caprter": {"value": 6655.3, "wow": -0.0521}}}, "tiktok_videos": {"food": {"2025-11-24": {"buldak": {"value": 240.54, "wow": 0.0079}, "buldakcarbonara": {"value": 60.62, "wow": 0.0028}, "buldakramen": {"value": 147.22, "wow": 0.0022}, "CORNDOG": {"value": 157.23, "wow": 0.0024}, "KOREANCORNDOG": {"value": 40.53, "wow": 0.0019}, "KIMBAP": {"value": 70.85, "wow": 0.0047}, "BIBIGO": {"value": 10.29, "wow": 0.0193}, "CHOCOPIE": {"value": 26.05, "wow": null}, "tofu": {"value": 235.23, "wow": null}, "toomba": {"value": 1.31, "wow": 0.0116}, "Shinramyun": {"value": 19.43, "wow": 0.0096}, "kyochon": {"value": 2.6, "wow": null}, "koreanchicken": {"value": 23.39, "wow": 0.0051}}, "2025-12-01": {"buldak": {"value": 243.35, "wow": 0.0117}, "buldakcarbonara": {"value": 60.99, "wow": 0.0061}, "buldakramen": {"value": 147.82, "wow": 0.0041}, "CORNDOG": {"value": 157.79, "wow": 0.0036}, "KOREANCORNDOG": {"value": 40.67, "wow": 0.0037}, "KIMBAP": {"value": 71.14, "wow": 0.004}, "BIBIGO": {"value": 10.56, "wow": 0.0263}, "CHOCOPIE": {"value": 26.29, "wow": 0.0094}, "tofu": {"value": 236.73, "wow": 0.0064}, "toomba": {"value": 1.31, "wow": 0.0054}, "Shinramyun": {"value": 19.6, "wow": 0.0091}, "kyochon": {"value": 2.64, "wow": 0.0146}, "koreanchicken": {"value": 23.49, "wow": 0.0041}}, "2025-12-08": {"buldak": {"value": 245.83, "wow": 0.0102}, "buldakcarbonara": {"value": 61.38, "wow": 0.0063}, "buldakramen": {"value": 148.46, "wow": 0.0043}, "CORNDOG": {"value": 158.23, "wow": 0.0028}, "KOREANCORNDOG": {"value": 40.77, "wow": 0.0025}, "KIMBAP": {"value": 71.57, "wow": 0.0061}, "BIBIGO": {"value": 10.86, "wow": 0.0283}, "CHOCOPIE": {"value": 26.47, "wow": 0.0068}, "tofu": {"value": 237.48, "wow": 0.0032}, "toomba": {"value": 1.33, "wow": 0.0137}, "Shinramyun": {"value": 19.8, "wow": 0.01}, "kyochon": {"value": 2.65, "wow": 0.0038}, "koreanchicken": {"value": 23.58, "wow": 0.0037}}, "2025-12-15": {"buldak": {"value": 247.93, "wow": 0.0085}, "buldakcarbonara": {"value": 61.7, "wow": 0.0052}, "buldakramen": {"value": 149.05, "wow": 0.004}, "CORNDOG": {"value": 158.83, "wow": 0.0038}, "KOREANCORNDOG": {"value": 40.86, "wow": 0.002}, "KIMBAP": {"value": 71.88, "wow": 0.0043}, "BIBIGO": {"value": 11.09, "wow": 0.0211}, "CHOCOPIE": {"value": 26.63, "wow": 0.006}, "tofu": {"value": 238.21, "wow": 0.0031}, "toomba": {"value": 1.35, "wow": 0.015}, "Shinramyun": {"value": 19.95, "wow": 0.0077}, "kyochon": {"value": 2.67, "wow": 0.0083}, "koreanchicken": {"value": 23.66, "wow": 0.0037}}, "2025-12-22": {"buldak": {"value": 250.08, "wow": 0.0087}, "buldakcarbonara": {"value": 61.97, "wow": 0.0045}, "buldakramen": {"value": 149.53, "wow": 0.0032}, "CORNDOG": {"value": 159.42, "wow": 0.0038}, "KOREANCORNDOG": {"value": 41.0, "wow": 0.0035}, "KIMBAP": {"value": 72.26, "wow": 0.0053}, "BIBIGO": {"value": 11.5, "wow": 0.0367}, "CHOCOPIE": {"value": 26.75, "wow": 0.0047}, "tofu": {"value": 238.81, "wow": 0.0025}, "toomba": {"value": 1.37, "wow": 0.0104}, "Shinramyun": {"value": 20.19, "wow": 0.0118}, "kyochon": {"value": 2.7, "wow": 0.0082}, "koreanchicken": {"value": 23.77, "wow": 0.0046}}, "2025-12-29": {"buldak": {"value": 252.26, "wow": 0.0087}, "buldakcarbonara": {"value": 62.3, "wow": 0.0053}, "buldakramen": {"value": 150.01, "wow": 0.0032}, "CORNDOG": {"value": 159.56, "wow": 0.0009}, "KOREANCORNDOG": {"value": 41.06, "wow": 0.0013}, "KIMBAP": {"value": 72.56, "wow": 0.0042}, "BIBIGO": {"value": 11.77, "wow": 0.023}, "CHOCOPIE": {"value": 26.91, "wow": 0.006}, "tofu": {"value": 239.29, "wow": 0.002}, "toomba": {"value": 1.39, "wow": 0.0168}, "Shinramyun": {"value": 20.32, "wow": 0.0068}, "kyochon": {"value": 2.73, "wow": 0.0111}, "koreanchicken": {"value": 23.83, "wow": 0.0025}}, "2026-01-05": {"buldak": {"value": 255.06, "wow": 0.0111}, "buldakcarbonara": {"value": 62.81, "wow": 0.0081}, "buldakramen": {"value": 150.58, "wow": 0.0038}, "CORNDOG": {"value": 160.16, "wow": 0.0037}, "KOREANCORNDOG": {"value": 41.19, "wow": 0.0033}, "KIMBAP": {"value": 72.83, "wow": 0.0036}, "BIBIGO": {"value": 11.98, "wow": 0.0186}, "CHOCOPIE": {"value": 27.02, "wow": 0.0041}, "tofu": {"value": 239.88, "wow": 0.0024}, "toomba": {"value": 1.45, "wow": 0.0446}, "Shinramyun": {"value": 21.25, "wow": 0.0453}, "kyochon": {"value": 2.76, "wow": 0.0125}, "koreanchicken": {"value": 23.91, "wow": 0.0034}}, "2026-01-12": {"buldak": {"value": 258.31, "wow": 0.0128}, "buldakcarbonara": {"value": 63.39, "wow": 0.0093}, "buldakramen": {"value": 151.27, "wow": 0.0046}, "CORNDOG": {"value": 160.95, "wow": 0.0049}, "KOREANCORNDOG": {"value": 41.33, "wow": 0.0033}, "KIMBAP": {"value": 73.19, "wow": 0.005}, "BIBIGO": {"value": 12.3, "wow": 0.0266}, "CHOCOPIE": {"value": 27.21, "wow": 0.0069}, "tofu": {"value": 240.91, "wow": 0.0043}, "toomba": {"value": 1.48, "wow": 0.0172}, "Shinramyun": {"value": 21.34, "wow": 0.0045}, "kyochon": {"value": 2.77, "wow": 0.0036}, "koreanchicken": {"value": 23.97, "wow": 0.0022}}, "2026-01-19": {"buldak": {"value": 261.33, "wow": 0.0117}, "buldakcarbonara": {"value": 63.92, "wow": 0.0084}, "buldakramen": {"value": 152.0, "wow": 0.0048}, "CORNDOG": {"value": 161.55, "wow": 0.0038}, "KOREANCORNDOG": {"value": 41.42, "wow": 0.0022}, "KIMBAP": {"value": 73.54, "wow": 0.0048}, "BIBIGO": {"value": 12.58, "wow": 0.0222}, "CHOCOPIE": {"value": 27.34, "wow": 0.0049}, "tofu": {"value": 241.74, "wow": 0.0034}, "toomba": {"value": 1.49, "wow": 0.0068}, "Shinramyun": {"value": 21.52, "wow": 0.0084}, "kyochon": {"value": 2.78, "wow": 0.0029}, "koreanchicken": {"value": 24.1, "wow": 0.0056}}, "2026-01-26": {"buldak": {"value": 264.26, "wow": 0.0112}, "buldakcarbonara": {"value": 64.46, "wow": 0.0084}, "buldakramen": {"value": 152.63, "wow": 0.0041}, "CORNDOG": {"value": 162.43, "wow": 0.0054}, "KOREANCORNDOG": {"value": 41.53, "wow": 0.0027}, "KIMBAP": {"value": 73.88, "wow": 0.0047}, "BIBIGO": {"value": 12.8, "wow": 0.0178}, "CHOCOPIE": {"value": 27.55, "wow": 0.0076}, "tofu": {"value": 242.6, "wow": 0.0036}, "toomba": {"value": 1.5, "wow": 0.0094}, "Shinramyun": {"value": 21.67, "wow": 0.007}, "kyochon": {"value": 2.82, "wow": 0.0148}}, "2026-02-02": {"buldak": {"value": 268.02, "wow": 0.0142}, "buldakcarbonara": {"value": 65.0, "wow": 0.0084}, "buldakramen": {"value": 153.18, "wow": 0.0036}, "CORNDOG": {"value": 163.6, "wow": 0.0072}, "KOREANCORNDOG": {"value": 41.62, "wow": 0.0022}, "KIMBAP": {"value": 74.21, "wow": 0.0045}, "BIBIGO": {"value": 12.99, "wow": 0.0148}, "CHOCOPIE": {"value": 27.91, "wow": 0.0131}, "tofu": {"value": 243.85, "wow": 0.0052}, "toomba": {"value": 1.5, "wow": null}, "Shinramyun": {"value": 21.84, "wow": 0.0078}, "kyochon": {"value": 2.88, "wow": 0.0213}}, "2026-02-09": {"buldak": {"value": 270.93, "wow": 0.0109}, "buldakcarbonara": {"value": 65.51, "wow": 0.0078}, "buldakramen": {"value": 153.86, "wow": 0.0044}, "CORNDOG": {"value": 164.28, "wow": 0.0042}, "KOREANCORNDOG": {"value": 41.73, "wow": 0.0026}, "KIMBAP": {"value": 74.57, "wow": 0.0049}, "BIBIGO": {"value": 13.27, "wow": 0.0216}, "CHOCOPIE": {"value": 28.44, "wow": 0.019}, "tofu": {"value": 244.73, "wow": 0.0036}, "toomba": {"value": 1.54, "wow": 0.0267}, "Shinramyun": {"value": 22.0, "wow": 0.0073}, "kyochon": {"value": 2.91, "wow": 0.0104}}}, "cosmetics": {"2025-11-24": {"tonymoly": {"value": 19.74, "wow": 0.0067}, "anua": {"value": 313.76, "wow": 0.0116}, "cosrx": {"value": 367.36, "wow": 0.0116}, "innisfree": {"value": 108.23, "wow": 0.0071}, "manyo": {"value": 36.62, "wow": 0.0029}, "reedleshot": {"value": 41.11, "wow": 0.0166}, "beautyofjoseon": {"value": 217.78, "wow": 0.0074}, "mixsoon": {"value": 163.03, "wow": 0.0177}, "skin1004": {"value": 787.42, "wow": 0.0244}, "romand": {"value": 271.7, "wow": 0.0057}, "clio": {"value": 309.13, "wow": 0.0024}, "goodal": {"value": 14.42, "wow": 0.0232}, "peripera": {"value": 82.93, "wow": 0.0073}, "wakemake": {"value": 8.88, "wow": null}, "colorgram": {"value": 22.45, "wow": 0.0438}, "fillimilli": {"value": 1.71, "wow": null}, "bringgreen": {"value": 5.0, "wow": 0.0158}, "roundaround": {"value": 0.56, "wow": null}, "biohealboh": {"value": 5.2, "wow": 0.1227}, "dreamworks": {"value": 363.81, "wow": null}, "mediheal": {"value": 72.37, "wow": 0.0064}, "amuse": {"value": 97.76, "wow": 0.0043}, "torriden": {"value": 72.15, "wow": 0.0182}, "missha": {"value": 56.96, "wow": 0.0222}, "dalba": {"value": 88.0, "wow": 0.0201}, "ahc": {"value": 17.66, "wow": 0.0036}, "celimax": {"value": 42.14, "wow": 0.0179}, "eiio": {"value": 1.56, "wow": null}, "tirtir": {"value": 99.97, "wow": 0.0428}, "ager": {"value": 13.84, "wow": null}, "medicube": {"value": 513.07, "wow": 0.0277}, "drmelaxin": {"value": 132.25, "wow": 0.0699}, "stylekorean": {"value": 8.64, "wow": 0.2437}}, "2025-12-01": {"tonymoly": {"value": 19.91, "wow": 0.0086}, "anua": {"value": 318.0, "wow": 0.0135}, "cosrx": {"value": 372.44, "wow": 0.0138}, "innisfree": {"value": 109.2, "wow": 0.0089}, "manyo": {"value": 36.72, "wow": 0.0027}, "reedleshot": {"value": 41.76, "wow": 0.0158}, "beautyofjoseon": {"value": 219.7, "wow": 0.0088}, "mixsoon": {"value": 166.62, "wow": 0.0221}, "skin1004": {"value": 812.01, "wow": 0.0312}, "romand": {"value": 273.57, "wow": 0.0069}, "clio": {"value": 310.29, "wow": 0.0037}, "goodal": {"value": 14.55, "wow": 0.0088}, "peripera": {"value": 83.62, "wow": 0.0082}, "wakemake": {"value": 8.92, "wow": 0.005}, "colorgram": {"value": 23.57, "wow": 0.0503}, "fillimilli": {"value": 1.71, "wow": -0.0023}, "bringgreen": {"value": 5.07, "wow": 0.014}, "roundaround": {"value": 0.53, "wow": -0.0549}, "biohealboh": {"value": 5.64, "wow": 0.0842}, "dreamworks": {"value": 364.36, "wow": 0.0015}, "mediheal": {"value": 72.8, "wow": 0.0059}, "amuse": {"value": 98.05, "wow": 0.003}, "torriden": {"value": 73.89, "wow": 0.0241}, "missha": {"value": 58.18, "wow": 0.0215}, "dalba": {"value": 89.99, "wow": 0.0226}, "ahc": {"value": 17.75, "wow": 0.0049}, "celimax": {"value": 43.24, "wow": 0.0262}, "eiio": {"value": 1.68, "wow": 0.0776}, "tirtir": {"value": 103.62, "wow": 0.0365}, "ager": {"value": 15.73, "wow": 0.137}, "medicube": {"value": 528.81, "wow": 0.0307}, "drmelaxin": {"value": 138.7, "wow": 0.0488}, "stylekorean": {"value": 6.45, "wow": -0.2535}}, "2025-12-08": {"tonymoly": {"value": 20.07, "wow": 0.0082}, "anua": {"value": 320.78, "wow": 0.0088}, "cosrx": {"value": 377.16, "wow": 0.0127}, "innisfree": {"value": 109.95, "wow": 0.0069}, "manyo": {"value": 36.81, "wow": 0.0025}, "reedleshot": {"value": 42.32, "wow": 0.0135}, "beautyofjoseon": {"value": 221.33, "wow": 0.0074}, "mixsoon": {"value": 169.75, "wow": 0.0188}, "skin1004": {"value": 831.71, "wow": 0.0243}, "romand": {"value": 275.37, "wow": 0.0066}, "clio": {"value": 311.68, "wow": 0.0045}, "goodal": {"value": 14.79, "wow": 0.0169}, "peripera": {"value": 84.0, "wow": 0.0045}, "wakemake": {"value": 8.95, "wow": 0.0039}, "colorgram": {"value": 24.53, "wow": 0.0406}, "fillimilli": {"value": 1.71, "wow": 0.0012}, "bringgreen": {"value": 5.13, "wow": 0.012}, "roundaround": {"value": 0.53, "wow": null}, "biohealboh": {"value": 5.88, "wow": 0.0436}, "dreamworks": {"value": 364.69, "wow": 0.0009}, "mediheal": {"value": 73.21, "wow": 0.0056}, "amuse": {"value": 98.37, "wow": 0.0033}, "torriden": {"value": 75.89, "wow": 0.0271}, "missha": {"value": 59.3, "wow": 0.0193}, "dalba": {"value": 91.87, "wow": 0.0209}, "ahc": {"value": 17.98, "wow": 0.013}, "celimax": {"value": 44.13, "wow": 0.0205}, "eiio": {"value": 1.74, "wow": 0.0351}, "tirtir": {"value": 106.94, "wow": 0.0321}, "ager": {"value": 14.1, "wow": -0.1039}, "medicube": {"value": 542.9, "wow": 0.0267}, "drmelaxin": {"value": 144.87, "wow": 0.0445}, "stylekorean": {"value": 6.17, "wow": -0.0431}}, "2025-12-15": {"tonymoly": {"value": 20.23, "wow": 0.0077}, "anua": {"value": 323.85, "wow": 0.0095}, "cosrx": {"value": 382.69, "wow": 0.0147}, "innisfree": {"value": 110.93, "wow": 0.009}, "manyo": {"value": 37.03, "wow": 0.0059}, "reedleshot": {"value": 42.7, "wow": 0.0089}, "beautyofjoseon": {"value": 222.71, "wow": 0.0062}, "mixsoon": {"value": 172.6, "wow": 0.0168}, "skin1004": {"value": 854.24, "wow": 0.0271}, "romand": {"value": 277.31, "wow": 0.007}, "clio": {"value": 312.53, "wow": 0.0027}, "goodal": {"value": 14.94, "wow": 0.0102}, "peripera": {"value": 84.27, "wow": 0.0033}, "wakemake": {"value": 9.0, "wow": 0.0047}, "colorgram": {"value": 25.26, "wow": 0.0296}, "fillimilli": {"value": 1.71, "wow": 0.0041}, "bringgreen": {"value": 5.15, "wow": 0.0041}, "roundaround": {"value": 0.53, "wow": null}, "biohealboh": {"value": 6.11, "wow": 0.0379}, "dreamworks": {"value": 365.05, "wow": 0.001}, "mediheal": {"value": 73.68, "wow": 0.0065}, "amuse": {"value": 98.66, "wow": 0.003}, "torriden": {"value": 78.6, "wow": 0.0357}, "missha": {"value": 60.32, "wow": 0.0171}, "dalba": {"value": 94.27, "wow": 0.0261}, "ahc": {"value": 18.18, "wow": 0.0115}, "celimax": {"value": 45.4, "wow": 0.0289}, "eiio": {"value": 1.8, "wow": 0.0357}, "tirtir": {"value": 110.78, "wow": 0.0359}, "ager": {"value": 13.06, "wow": -0.0734}, "medicube": {"value": 555.97, "wow": 0.0241}, "drmelaxin": {"value": 151.24, "wow": 0.0439}, "stylekorean": {"value": 6.37, "wow": 0.0316}}, "2025-12-22": {"tonymoly": {"value": 20.37, "wow": 0.007}, "anua": {"value": 327.03, "wow": 0.0098}, "cosrx": {"value": 387.93, "wow": 0.0137}, "innisfree": {"value": 111.82, "wow": 0.008}, "manyo": {"value": 37.18, "wow": 0.004}, "reedleshot": {"value": 43.03, "wow": 0.0078}, "beautyofjoseon": {"value": 224.07, "wow": 0.0061}, "mixsoon": {"value": 175.14, "wow": 0.0147}, "skin1004": {"value": 876.65, "wow": 0.0262}, "romand": {"value": 279.56, "wow": 0.0081}, "clio": {"value": 313.24, "wow": 0.0023}, "goodal": {"value": 15.04, "wow": 0.0062}, "peripera": {"value": 84.73, "wow": 0.0054}, "wakemake": {"value": 9.04, "wow": 0.0043}, "colorgram": {"value": 25.77, "wow": 0.0202}, "fillimilli": {"value": 1.71, "wow": -0.0006}, "bringgreen": {"value": 5.18, "wow": 0.0045}, "roundaround": {"value": 0.54, "wow": 0.0019}, "biohealboh": {"value": 6.37, "wow": 0.0431}, "dreamworks": {"value": 365.39, "wow": 0.0009}, "mediheal": {"value": 74.11, "wow": 0.0058}, "amuse": {"value": 98.88, "wow": 0.0022}, "torriden": {"value": 80.77, "wow": 0.0276}, "missha": {"value": 61.26, "wow": 0.0155}, "dalba": {"value": 96.59, "wow": 0.0246}, "ahc": {"value": 18.35, "wow": 0.0089}, "celimax": {"value": 47.09, "wow": 0.0371}, "eiio": {"value": 1.88, "wow": 0.0439}, "tirtir": {"value": 113.59, "wow": 0.0253}, "ager": {"value": 11.42, "wow": -0.1259}, "medicube": {"value": 567.39, "wow": 0.0205}, "drmelaxin": {"value": 157.2, "wow": 0.0394}, "stylekorean": {"value": 5.97, "wow": -0.063}}, "2025-12-29": {"tonymoly": {"value": 20.55, "wow": 0.0087}, "anua": {"value": 329.53, "wow": 0.0076}, "cosrx": {"value": 392.64, "wow": 0.0122}, "innisfree": {"value": 112.8, "wow": 0.0088}, "manyo": {"value": 37.37, "wow": 0.0051}, "reedleshot": {"value": 43.53, "wow": 0.0116}, "beautyofjoseon": {"value": 225.48, "wow": 0.0063}, "mixsoon": {"value": 177.27, "wow": 0.0122}, "skin1004": {"value": 897.58, "wow": 0.0239}, "romand": {"value": 281.66, "wow": 0.0075}, "clio": {"value": 314.63, "wow": 0.0044}, "goodal": {"value": 15.14, "wow": 0.0069}, "peripera": {"value": 84.98, "wow": 0.003}, "wakemake": {"value": 9.07, "wow": 0.0035}, "colorgram": {"value": 26.39, "wow": 0.0238}, "fillimilli": {"value": 1.72, "wow": 0.0018}, "bringgreen": {"value": 5.18, "wow": 0.0015}, "roundaround": {"value": 0.53, "wow": -0.0019}, "biohealboh": {"value": 6.53, "wow": 0.0256}, "dreamworks": {"value": 365.57, "wow": 0.0005}, "mediheal": {"value": 74.58, "wow": 0.0064}, "amuse": {"value": 98.99, "wow": 0.0011}, "torriden": {"value": 82.48, "wow": 0.0212}, "missha": {"value": 62.21, "wow": 0.0156}, "dalba": {"value": 99.17, "wow": 0.0266}, "ahc": {"value": 18.47, "wow": 0.0065}, "celimax": {"value": 49.27, "wow": 0.0463}, "eiio": {"value": 1.95, "wow": 0.0388}, "tirtir": {"value": 115.45, "wow": 0.0164}, "ager": {"value": 9.47, "wow": -0.1709}, "medicube": {"value": 576.85, "wow": 0.0167}, "drmelaxin": {"value": 161.97, "wow": 0.0303}, "stylekorean": {"value": 4.76, "wow": -0.2015}}, "2026-01-05": {"tonymoly": {"value": 20.66, "wow": 0.0055}, "anua": {"value": 331.97, "wow": 0.0074}, "cosrx": {"value": 397.09, "wow": 0.0113}, "innisfree": {"value": 113.05, "wow": 0.0022}, "manyo": {"value": 37.52, "wow": 0.0042}, "reedleshot": {"value": 43.85, "wow": 0.0074}, "beautyofjoseon": {"value": 226.6, "wow": 0.005}, "mixsoon": {"value": 179.78, "wow": 0.0141}, "skin1004": {"value": 918.49, "wow": 0.0233}, "romand": {"value": 283.45, "wow": 0.0064}, "clio": {"value": 315.82, "wow": 0.0038}, "goodal": {"value": 15.25, "wow": 0.0072}, "peripera": {"value": 85.33, "wow": 0.0041}, "wakemake": {"value": 9.1, "wow": 0.0035}, "colorgram": {"value": 27.18, "wow": 0.03}, "fillimilli": {"value": 1.73, "wow": 0.0052}, "bringgreen": {"value": 5.2, "wow": 0.0021}, "roundaround": {"value": 0.53, "wow": null}, "biohealboh": {"value": 6.72, "wow": 0.0283}, "dreamworks": {"value": 365.87, "wow": 0.0008}, "mediheal": {"value": 74.97, "wow": 0.0052}, "amuse": {"value": 99.24, "wow": 0.0026}, "torriden": {"value": 84.09, "wow": 0.0195}, "missha": {"value": 63.33, "wow": 0.0179}, "dalba": {"value": 101.92, "wow": 0.0278}, "ahc": {"value": 18.58, "wow": 0.0062}, "celimax": {"value": 52.44, "wow": 0.0643}, "eiio": {"value": 2.01, "wow": 0.0297}, "tirtir": {"value": 117.17, "wow": 0.0149}, "ager": {"value": 10.31, "wow": 0.0896}, "medicube": {"value": 587.17, "wow": 0.0179}, "drmelaxin": {"value": 167.37, "wow": 0.0334}, "stylekorean": {"value": 5.4, "wow": 0.1341}}, "2026-01-12": {"tonymoly": {"value": 20.78, "wow": 0.0059}, "anua": {"value": 335.76, "wow": 0.0114}, "cosrx": {"value": 402.6, "wow": 0.0139}, "innisfree": {"value": 113.45, "wow": 0.0035}, "manyo": {"value": 37.71, "wow": 0.005}, "reedleshot": {"value": 44.3, "wow": 0.0103}, "beautyofjoseon": {"value": 228.21, "wow": 0.0071}, "mixsoon": {"value": 182.35, "wow": 0.0143}, "skin1004": {"value": 942.43, "wow": 0.0261}, "romand": {"value": 285.65, "wow": 0.0077}, "clio": {"value": 317.08, "wow": 0.004}, "goodal": {"value": 15.34, "wow": 0.006}, "peripera": {"value": 85.68, "wow": 0.0041}, "wakemake": {"value": 9.16, "wow": 0.0073}, "colorgram": {"value": 27.78, "wow": 0.0222}, "fillimilli": {"value": 1.73, "wow": 0.0052}, "bringgreen": {"value": 5.21, "wow": 0.0025}, "roundaround": {"value": 0.54, "wow": 0.0019}, "biohealboh": {"value": 6.87, "wow": 0.022}, "dreamworks": {"value": 366.3, "wow": 0.0012}, "mediheal": {"value": 75.59, "wow": 0.0083}, "amuse": {"value": 99.72, "wow": 0.0048}, "torriden": {"value": 86.24, "wow": 0.0256}, "missha": {"value": 64.86, "wow": 0.0242}, "dalba": {"value": 105.25, "wow": 0.0327}, "ahc": {"value": 18.72, "wow": 0.0074}, "celimax": {"value": 53.94, "wow": 0.0288}, "eiio": {"value": 2.11, "wow": 0.0512}, "tirtir": {"value": 119.36, "wow": 0.0187}, "ager": {"value": 13.85, "wow": 0.3428}, "medicube": {"value": 601.02, "wow": 0.0236}, "drmelaxin": {"value": 174.62, "wow": 0.0433}, "stylekorean": {"value": 7.25, "wow": 0.342}}, "2026-01-19": {"tonymoly": {"value": 20.93, "wow": 0.0071}, "anua": {"value": 339.07, "wow": 0.0098}, "cosrx": {"value": 408.57, "wow": 0.0148}, "innisfree": {"value": 114.21, "wow": 0.0067}, "manyo": {"value": 38.03, "wow": 0.0084}, "reedleshot": {"value": 44.58, "wow": 0.0062}, "beautyofjoseon": {"value": 229.67, "wow": 0.0064}, "mixsoon": {"value": 184.4, "wow": 0.0112}, "skin1004": {"value": 962.26, "wow": 0.021}, "romand": {"value": 287.64, "wow": 0.007}, "clio": {"value": 318.41, "wow": 0.0042}, "goodal": {"value": 15.42, "wow": 0.0052}, "peripera": {"value": 85.95, "wow": 0.0031}, "wakemake": {"value": 9.22, "wow": 0.0062}, "colorgram": {"value": 28.03, "wow": 0.009}, "fillimilli": {"value": 1.74, "wow": 0.0035}, "bringgreen": {"value": 5.22, "wow": 0.0017}, "roundaround": {"value": 0.54, "wow": 0.0075}, "biohealboh": {"value": 7.11, "wow": 0.0358}, "dreamworks": {"value": 367.04, "wow": 0.002}, "mediheal": {"value": 75.93, "wow": 0.0045}, "amuse": {"value": 100.19, "wow": 0.0047}, "torriden": {"value": 89.17, "wow": 0.0339}, "missha": {"value": 66.28, "wow": 0.0218}, "dalba": {"value": 108.2, "wow": 0.028}, "ahc": {"value": 18.84, "wow": 0.0064}, "celimax": {"value": 55.14, "wow": 0.0222}, "eiio": {"value": 2.19, "wow": 0.0345}, "tirtir": {"value": 121.4, "wow": 0.0171}, "ager": {"value": 12.97, "wow": -0.064}, "medicube": {"value": 613.99, "wow": 0.0216}, "drmelaxin": {"value": 181.38, "wow": 0.0387}, "stylekorean": {"value": 6.75, "wow": -0.0685}}, "2026-01-26": {"tonymoly": {"value": 21.01, "wow": 0.0038}, "anua": {"value": 342.64, "wow": 0.0105}, "cosrx": {"value": 414.02, "wow": 0.0133}, "innisfree": {"value": 115.09, "wow": 0.0077}, "manyo": {"value": 38.21, "wow": 0.0048}, "reedleshot": {"value": 44.76, "wow": 0.0041}, "beautyofjoseon": {"value": 231.18, "wow": 0.0066}, "mixsoon": {"value": 186.15, "wow": 0.0095}, "skin1004": {"value": 978.21, "wow": 0.0166}, "romand": {"value": 289.99, "wow": 0.0082}, "clio": {"value": 319.93, "wow": 0.0048}, "goodal": {"value": 15.5, "wow": 0.0052}, "peripera": {"value": 86.26, "wow": 0.0036}, "wakemake": {"value": 9.29, "wow": 0.0074}, "colorgram": {"value": 28.35, "wow": 0.0115}, "fillimilli": {"value": 1.74, "wow": null}, "bringgreen": {"value": 5.25, "wow": 0.0063}, "roundaround": {"value": 0.54, "wow": 0.0019}, "biohealboh": {"value": 7.35, "wow": 0.0336}, "dreamworks": {"value": 367.36, "wow": 0.0009}, "mediheal": {"value": 76.29, "wow": 0.0047}, "amuse": {"value": 100.49, "wow": 0.003}, "torriden": {"value": 91.96, "wow": 0.0313}, "missha": {"value": 67.61, "wow": 0.0201}, "dalba": {"value": 110.58, "wow": 0.022}, "ahc": {"value": 18.88, "wow": 0.0023}, "celimax": {"value": 56.2, "wow": 0.0192}, "tirtir": {"value": 123.21, "wow": 0.0149}, "medicube": {"value": 626.61, "wow": 0.0206}, "drmelaxin": {"value": 188.82, "wow": 0.041}}, "2026-02-02": {"tonymoly": {"value": 21.22, "wow": 0.01}, "anua": {"value": 346.74, "wow": 0.012}, "cosrx": {"value": 420.82, "wow": 0.0164}, "innisfree": {"value": 116.35, "wow": 0.0109}, "manyo": {"value": 38.28, "wow": 0.0018}, "reedleshot": {"value": 45.1, "wow": 0.0076}, "beautyofjoseon": {"value": 232.64, "wow": 0.0063}, "mixsoon": {"value": 187.93, "wow": 0.0096}, "skin1004": {"value": 997.97, "wow": 0.0202}, "romand": {"value": 291.87, "wow": 0.0065}, "clio": {"value": 321.01, "wow": 0.0034}, "goodal": {"value": 15.55, "wow": 0.0032}, "peripera": {"value": 86.63, "wow": 0.0043}, "wakemake": {"value": 9.34, "wow": 0.0054}, "colorgram": {"value": 28.59, "wow": 0.0085}, "fillimilli": {"value": 1.74, "wow": null}, "bringgreen": {"value": 5.29, "wow": 0.0076}, "roundaround": {"value": 0.54, "wow": null}, "biohealboh": {"value": 7.46, "wow": 0.015}, "dreamworks": {"value": 366.8, "wow": -0.0015}, "mediheal": {"value": 76.74, "wow": 0.0059}, "amuse": {"value": 100.42, "wow": -0.0007}, "torriden": {"value": 95.12, "wow": 0.0344}, "missha": {"value": 69.14, "wow": 0.0226}, "dalba": {"value": 113.5, "wow": 0.0264}, "ahc": {"value": 19.02, "wow": 0.0074}, "celimax": {"value": 57.48, "wow": 0.0228}, "tirtir": {"value": 124.89, "wow": 0.0136}, "medicube": {"value": 640.34, "wow": 0.0219}, "drmelaxin": {"value": 196.0, "wow": 0.038}}, "2026-02-09": {"tonymoly": {"value": 21.35, "wow": 0.0061}, "anua": {"value": 350.79, "wow": 0.0117}, "cosrx": {"value": 426.5, "wow": 0.0135}, "innisfree": {"value": 117.75, "wow": 0.012}, "manyo": {"value": 38.35, "wow": 0.0018}, "reedleshot": {"value": 45.47, "wow": 0.0082}, "beautyofjoseon": {"value": 234.49, "wow": 0.008}, "mixsoon": {"value": 189.61, "wow": 0.0089}, "skin1004": {"value": 1017.76, "wow": 0.0198}, "romand": {"value": 293.27, "wow": 0.0048}, "clio": {"value": 322.35, "wow": 0.0042}, "goodal": {"value": 15.64, "wow": 0.0058}, "peripera": {"value": 86.95, "wow": 0.0037}, "wakemake": {"value": 9.38, "wow": 0.0043}, "colorgram": {"value": 28.96, "wow": 0.0129}, "fillimilli": {"value": 1.72, "wow": -0.0115}, "bringgreen": {"value": 5.28, "wow": -0.0019}, "roundaround": {"value": 0.54, "wow": null}, "biohealboh": {"value": 7.65, "wow": 0.0255}, "mediheal": {"value": 77.21, "wow": 0.0061}, "torriden": {"value": 98.03, "wow": 0.0306}, "missha": {"value": 70.43, "wow": 0.0187}, "dalba": {"value": 116.48, "wow": 0.0263}, "ahc": {"value": 19.16, "wow": 0.0074}, "celimax": {"value": 58.54, "wow": 0.0184}, "eiio": {"value": 2.32, "wow": null}, "tirtir": {"value": 127.23, "wow": 0.0187}, "medicube": {"value": 659.22, "wow": 0.0295}, "drmelaxin": {"value": 204.66, "wow": 0.0442}}}, "idol": {"2025-11-24": {"bts": {"value": 102408.81, "wow": 0.0007}, "jungkook": {"value": 39316.89, "wow": 0.0012}, "seventeen": {"value": 7559.96, "wow": 0.0015}, "newjeans": {"value": 2915.98, "wow": 0.0012}, "lesserafim": {"value": 2053.73, "wow": 0.0044}, "txt": {"value": 6472.97, "wow": -0.0004}, "enhypen": {"value": 15742.25, "wow": 0.002}, "boynextdoor": {"value": 688.43, "wow": 0.0051}, "tws": {"value": 1199.26, "wow": 0.008}, "illit": {"value": 842.81, "wow": 0.007}, "katseye": {"value": 1419.63, "wow": 0.0319}, "cortis": {"value": 769.85, "wow": 0.0802}, "straykids": {"value": 22166.04, "wow": 0.0034}, "twice": {"value": 13213.05, "wow": 0.0002}, "nmixx": {"value": 1039.68, "wow": -0.0002}, "itzy": {"value": 5066.5, "wow": -0.0002}, "niziu": {"value": 319.41, "wow": 0.0017}, "kickflip": {"value": 330.98, "wow": 0.0058}, "riize": {"value": 768.38, "wow": 0.0032}, "aespa": {"value": 3915.18, "wow": 0.0013}, "nctdream": {"value": 6025.59, "wow": 0.001}, "hearts2hearts": {"value": 332.98, "wow": 0.0246}, "nct127": {"value": 3783.91, "wow": -0.0007}, "treasure": {"value": 4730.49, "wow": 0.0004}, "babymonster": {"value": 2665.26, "wow": 0.0099}, "alldayproject": {"value": 74.62, "wow": 0.0662}, "gidle": {"value": 1872.76, "wow": -0.0026}, "TaylorSwift": {"value": 17909.89, "wow": 0.001}, "theweeknd": {"value": 4300.59, "wow": 0.0004}, "adele": {"value": 1904.48, "wow": 0.0037}, "dualipa": {"value": 1490.46, "wow": 0.0046}, "samsmith": {"value": 556.28, "wow": 0.0006}, "brunomars": {"value": 7354.47, "wow": 0.0003}, "arianagrande": {"value": 12415.64, "wow": 0.0029}}, "2025-12-01": {"bts": {"value": 102485.83, "wow": 0.0008}, "jungkook": {"value": 39362.78, "wow": 0.0012}, "seventeen": {"value": 7572.15, "wow": 0.0016}, "newjeans": {"value": 2915.62, "wow": -0.0001}, "lesserafim": {"value": 2060.09, "wow": 0.0031}, "txt": {"value": 6467.64, "wow": -0.0008}, "enhypen": {"value": 15809.06, "wow": 0.0042}, "boynextdoor": {"value": 693.96, "wow": 0.008}, "tws": {"value": 1209.88, "wow": 0.0089}, "illit": {"value": 862.89, "wow": 0.0238}, "katseye": {"value": 1463.84, "wow": 0.0311}, "cortis": {"value": 857.02, "wow": 0.1132}, "straykids": {"value": 22251.44, "wow": 0.0039}, "twice": {"value": 13214.86, "wow": 0.0001}, "nmixx": {"value": 1038.3, "wow": -0.0013}, "itzy": {"value": 5065.03, "wow": -0.0003}, "niziu": {"value": 320.96, "wow": 0.0049}, "kickflip": {"value": 332.88, "wow": 0.0058}, "riize": {"value": 774.2, "wow": 0.0076}, "aespa": {"value": 3918.89, "wow": 0.0009}, "nctdream": {"value": 6031.6, "wow": 0.001}, "hearts2hearts": {"value": 343.44, "wow": 0.0314}, "nct127": {"value": 3781.85, "wow": -0.0005}, "treasure": {"value": 4736.54, "wow": 0.0013}, "babymonster": {"value": 2701.9, "wow": 0.0137}, "alldayproject": {"value": 77.58, "wow": 0.0397}, "gidle": {"value": 1868.47, "wow": -0.0023}, "TaylorSwift": {"value": 17927.8, "wow": 0.001}, "theweeknd": {"value": 4301.99, "wow": 0.0003}, "adele": {"value": 1904.48, "wow": null}, "dualipa": {"value": 1507.56, "wow": 0.0115}, "samsmith": {"value": 556.75, "wow": 0.0009}, "brunomars": {"value": 7356.64, "wow": 0.0003}, "arianagrande": {"value": 12437.75, "wow": 0.0018}}, "2025-12-08": {"bts": {"value": 102580.46, "wow": 0.0009}, "jungkook": {"value": 39403.12, "wow": 0.001}, "seventeen": {"value": 7581.08, "wow": 0.0012}, "newjeans": {"value": 2917.09, "wow": 0.0005}, "lesserafim": {"value": 2065.16, "wow": 0.0025}, "txt": {"value": 6471.07, "wow": 0.0005}, "enhypen": {"value": 15840.19, "wow": 0.002}, "boynextdoor": {"value": 698.43, "wow": 0.0064}, "tws": {"value": 1221.41, "wow": 0.0095}, "illit": {"value": 879.4, "wow": 0.0191}, "katseye": {"value": 1507.33, "wow": 0.0297}, "cortis": {"value": 938.91, "wow": 0.0956}, "straykids": {"value": 22320.79, "wow": 0.0031}, "twice": {"value": 13213.26, "wow": -0.0001}, "nmixx": {"value": 1039.17, "wow": 0.0008}, "itzy": {"value": 5062.63, "wow": -0.0005}, "niziu": {"value": 321.78, "wow": 0.0026}, "kickflip": {"value": 334.75, "wow": 0.0056}, "riize": {"value": 779.0, "wow": 0.0062}, "aespa": {"value": 3923.27, "wow": 0.0011}, "nctdream": {"value": 6035.15, "wow": 0.0006}, "hearts2hearts": {"value": 353.19, "wow": 0.0284}, "nct127": {"value": 3780.82, "wow": -0.0003}, "treasure": {"value": 4740.49, "wow": 0.0008}, "babymonster": {"value": 2725.44, "wow": 0.0087}, "alldayproject": {"value": 80.16, "wow": 0.0333}, "gidle": {"value": 1864.3, "wow": -0.0022}, "TaylorSwift": {"value": 17955.99, "wow": 0.0016}, "theweeknd": {"value": 4307.75, "wow": 0.0013}, "adele": {"value": 1911.6, "wow": 0.0037}, "dualipa": {"value": 1530.17, "wow": 0.015}, "samsmith": {"value": 557.04, "wow": 0.0005}, "brunomars": {"value": 7357.87, "wow": 0.0002}, "arianagrande": {"value": 12458.53, "wow": 0.0017}}, "2025-12-15": {"bts": {"value": 102679.21, "wow": 0.001}, "jungkook": {"value": 39448.31, "wow": 0.0011}, "seventeen": {"value": 7588.91, "wow": 0.001}, "newjeans": {"value": 2914.89, "wow": -0.0008}, "lesserafim": {"value": 2070.22, "wow": 0.0024}, "txt": {"value": 6468.9, "wow": -0.0003}, "enhypen": {"value": 15893.35, "wow": 0.0034}, "boynextdoor": {"value": 701.79, "wow": 0.0048}, "tws": {"value": 1238.83, "wow": 0.0143}, "illit": {"value": 902.23, "wow": 0.026}, "katseye": {"value": 1544.97, "wow": 0.025}, "cortis": {"value": 1032.53, "wow": 0.0997}, "straykids": {"value": 22368.65, "wow": 0.0021}, "twice": {"value": 13216.47, "wow": 0.0002}, "nmixx": {"value": 1039.6, "wow": 0.0004}, "itzy": {"value": 5062.19, "wow": -0.0001}, "niziu": {"value": 320.86, "wow": -0.0029}, "kickflip": {"value": 336.57, "wow": 0.0054}, "riize": {"value": 782.3, "wow": 0.0042}, "aespa": {"value": 3927.34, "wow": 0.001}, "nctdream": {"value": 6041.26, "wow": 0.001}, "hearts2hearts": {"value": 362.32, "wow": 0.0259}, "nct127": {"value": 3785.27, "wow": 0.0012}, "treasure": {"value": 4740.46, "wow": -0.0}, "babymonster": {"value": 2745.79, "wow": 0.0075}, "alldayproject": {"value": 84.45, "wow": 0.0535}, "gidle": {"value": 1860.67, "wow": -0.0019}, "TaylorSwift": {"value": 17994.31, "wow": 0.0021}, "theweeknd": {"value": 4309.48, "wow": 0.0004}, "adele": {"value": 1911.8, "wow": 0.0001}, "dualipa": {"value": 1537.68, "wow": 0.0049}, "samsmith": {"value": 557.3, "wow": 0.0005}, "brunomars": {"value": 7357.72, "wow": -0.0}, "arianagrande": {"value": 12471.59, "wow": 0.001}}, "2025-12-22": {"bts": {"value": 102764.73, "wow": 0.0008}, "jungkook": {"value": 39504.6, "wow": 0.0014}, "seventeen": {"value": 7602.67, "wow": 0.0018}, "newjeans": {"value": 2915.7, "wow": 0.0003}, "lesserafim": {"value": 2074.63, "wow": 0.0021}, "txt": {"value": 6467.18, "wow": -0.0003}, "enhypen": {"value": 15912.59, "wow": 0.0012}, "boynextdoor": {"value": 705.61, "wow": 0.0054}, "tws": {"value": 1256.53, "wow": 0.0143}, "illit": {"value": 927.54, "wow": 0.0281}, "katseye": {"value": 1586.19, "wow": 0.0267}, "cortis": {"value": 1137.37, "wow": 0.1015}, "straykids": {"value": 22421.03, "wow": 0.0023}, "twice": {"value": 13221.51, "wow": 0.0004}, "nmixx": {"value": 1039.93, "wow": 0.0003}, "itzy": {"value": 5058.35, "wow": -0.0008}, "niziu": {"value": 321.58, "wow": 0.0022}, "kickflip": {"value": 337.94, "wow": 0.0041}, "riize": {"value": 785.08, "wow": 0.0036}, "aespa": {"value": 3930.07, "wow": 0.0007}, "nctdream": {"value": 6053.48, "wow": 0.002}, "hearts2hearts": {"value": 374.96, "wow": 0.0349}, "nct127": {"value": 3783.91, "wow": -0.0004}, "treasure": {"value": 4740.55, "wow": 0.0}, "babymonster": {"value": 2763.84, "wow": 0.0066}, "alldayproject": {"value": 88.73, "wow": 0.0508}, "gidle": {"value": 1855.8, "wow": -0.0026}, "TaylorSwift": {"value": 18029.14, "wow": 0.0019}, "theweeknd": {"value": 4316.14, "wow": 0.0015}, "adele": {"value": 1915.98, "wow": 0.0022}, "dualipa": {"value": 1539.63, "wow": 0.0013}, "samsmith": {"value": 557.57, "wow": 0.0005}, "brunomars": {"value": 7358.0, "wow": 0.0}, "arianagrande": {"value": 12484.35, "wow": 0.001}}, "2025-12-29": {"bts": {"value": 102826.14, "wow": 0.0006}, "jungkook": {"value": 39531.43, "wow": 0.0007}, "seventeen": {"value": 7611.33, "wow": 0.0011}, "newjeans": {"value": 2917.11, "wow": 0.0005}, "lesserafim": {"value": 2082.18, "wow": 0.0036}, "txt": {"value": 6468.64, "wow": 0.0002}, "enhypen": {"value": 15949.7, "wow": 0.0023}, "boynextdoor": {"value": 711.3, "wow": 0.0081}, "tws": {"value": 1272.3, "wow": 0.0126}, "illit": {"value": 952.93, "wow": 0.0274}, "katseye": {"value": 1631.02, "wow": 0.0283}, "cortis": {"value": 1233.9, "wow": 0.0849}, "straykids": {"value": 22493.4, "wow": 0.0032}, "twice": {"value": 13224.0, "wow": 0.0002}, "nmixx": {"value": 1039.77, "wow": -0.0001}, "itzy": {"value": 5054.34, "wow": -0.0008}, "niziu": {"value": 322.22, "wow": 0.002}, "kickflip": {"value": 337.94, "wow": null}, "riize": {"value": 788.42, "wow": 0.0043}, "aespa": {"value": 3933.82, "wow": 0.001}, "nctdream": {"value": 6059.64, "wow": 0.001}, "hearts2hearts": {"value": 387.01, "wow": 0.0321}, "nct127": {"value": 3780.97, "wow": -0.0008}, "treasure": {"value": 4742.26, "wow": 0.0004}, "babymonster": {"value": 2791.82, "wow": 0.0101}, "alldayproject": {"value": 91.88, "wow": 0.0355}, "gidle": {"value": 1851.66, "wow": -0.0022}, "TaylorSwift": {"value": 18054.54, "wow": 0.0014}, "theweeknd": {"value": 4320.91, "wow": 0.0011}, "adele": {"value": 1916.89, "wow": 0.0005}, "dualipa": {"value": 1540.9, "wow": 0.0008}, "samsmith": {"value": 557.65, "wow": 0.0001}, "brunomars": {"value": 7358.11, "wow": 0.0}, "arianagrande": {"value": 12499.12, "wow": 0.0012}}, "2026-01-05": {"bts": {"value": 102967.15, "wow": 0.0014}, "jungkook": {"value": 39543.49, "wow": 0.0003}, "seventeen": {"value": 7622.03, "wow": 0.0014}, "newjeans": {"value": 2978.14, "wow": 0.0209}, "lesserafim": {"value": 2089.69, "wow": 0.0036}, "txt": {"value": 6469.76, "wow": 0.0002}, "enhypen": {"value": 15995.65, "wow": 0.0029}, "boynextdoor": {"value": 715.88, "wow": 0.0064}, "tws": {"value": 1286.12, "wow": 0.0109}, "illit": {"value": 974.67, "wow": 0.0228}, "katseye": {"value": 1701.55, "wow": 0.0432}, "cortis": {"value": 1371.82, "wow": 0.1118}, "straykids": {"value": 22551.02, "wow": 0.0026}, "twice": {"value": 13228.08, "wow": 0.0003}, "nmixx": {"value": 1040.52, "wow": 0.0007}, "itzy": {"value": 5052.39, "wow": -0.0004}, "niziu": {"value": 322.54, "wow": 0.001}, "kickflip": {"value": 341.62, "wow": 0.0109}, "riize": {"value": 791.0, "wow": 0.0033}, "aespa": {"value": 3939.62, "wow": 0.0015}, "nctdream": {"value": 6063.05, "wow": 0.0006}, "hearts2hearts": {"value": 400.25, "wow": 0.0342}, "nct127": {"value": 3779.48, "wow": -0.0004}, "treasure": {"value": 4743.87, "wow": 0.0003}, "babymonster": {"value": 2826.36, "wow": 0.0124}, "alldayproject": {"value": 95.71, "wow": 0.0416}, "gidle": {"value": 1847.42, "wow": -0.0023}, "TaylorSwift": {"value": 18075.58, "wow": 0.0012}, "theweeknd": {"value": 4318.74, "wow": -0.0005}, "adele": {"value": 1921.52, "wow": 0.0024}, "dualipa": {"value": 1542.38, "wow": 0.001}, "samsmith": {"value": 557.67, "wow": 0.0}, "brunomars": {"value": 7356.71, "wow": -0.0002}, "arianagrande": {"value": 12508.41, "wow": 0.0007}}, "2026-01-12": {"bts": {"value": 103077.66, "wow": 0.0011}, "jungkook": {"value": 39567.6, "wow": 0.0006}, "seventeen": {"value": 7622.69, "wow": 0.0001}, "newjeans": {"value": 2981.59, "wow": 0.0012}, "lesserafim": {"value": 2097.48, "wow": 0.0037}, "txt": {"value": 6470.62, "wow": 0.0001}, "enhypen": {"value": 16043.21, "wow": 0.003}, "boynextdoor": {"value": 720.63, "wow": 0.0066}, "tws": {"value": 1305.13, "wow": 0.0148}, "katseye": {"value": 1757.12, "wow": 0.0327}, "cortis": {"value": 1517.67, "wow": 0.1063}, "straykids": {"value": 22617.46, "wow": 0.0029}, "twice": {"value": 13236.19, "wow": 0.0006}, "nmixx": {"value": 1040.5, "wow": -0.0}, "itzy": {"value": 5050.0, "wow": -0.0005}, "niziu": {"value": 323.04, "wow": 0.0016}, "kickflip": {"value": 343.69, "wow": 0.0061}, "riize": {"value": 795.95, "wow": 0.0062}, "aespa": {"value": 3939.24, "wow": -0.0001}, "nctdream": {"value": 6063.29, "wow": 0.0}, "hearts2hearts": {"value": 408.89, "wow": 0.0216}, "nct127": {"value": 3774.93, "wow": -0.0012}, "treasure": {"value": 4743.02, "wow": -0.0002}, "babymonster": {"value": 2845.28, "wow": 0.0067}, "alldayproject": {"value": 101.23, "wow": 0.0577}, "gidle": {"value": 1842.14, "wow": -0.0029}, "TaylorSwift": {"value": 18082.27, "wow": 0.0004}, "theweeknd": {"value": 4318.5, "wow": -0.0001}, "adele": {"value": 1928.29, "wow": 0.0035}, "dualipa": {"value": 1543.43, "wow": 0.0007}, "samsmith": {"value": 557.82, "wow": 0.0003}, "brunomars": {"value": 7377.09, "wow": 0.0028}, "arianagrande": {"value": 12514.59, "wow": 0.0005}}, "2026-01-19": {"bts": {"value": 103357.15, "wow": 0.0027}, "jungkook": {"value": 39602.57, "wow": 0.0009}, "seventeen": {"value": 7632.3, "wow": 0.0013}, "newjeans": {"value": 2983.92, "wow": 0.0008}, "lesserafim": {"value": 2104.01, "wow": 0.0031}, "txt": {"value": 6471.9, "wow": 0.0002}, "enhypen": {"value": 16123.85, "wow": 0.005}, "boynextdoor": {"value": 724.65, "wow": 0.0056}, "tws": {"value": 1319.47, "wow": 0.011}, "katseye": {"value": 1791.89, "wow": 0.0198}, "cortis": {"value": 1627.58, "wow": 0.0724}, "straykids": {"value": 22645.94, "wow": 0.0013}, "twice": {"value": 13244.6, "wow": 0.0006}, "nmixx": {"value": 1040.49, "wow": -0.0}, "itzy": {"value": 5046.82, "wow": -0.0006}, "niziu": {"value": 323.2, "wow": 0.0005}, "kickflip": {"value": 344.96, "wow": 0.0037}, "riize": {"value": 802.13, "wow": 0.0078}, "aespa": {"value": 3941.05, "wow": 0.0005}, "nctdream": {"value": 6064.13, "wow": 0.0001}, "hearts2hearts": {"value": 419.3, "wow": 0.0255}, "nct127": {"value": 3772.03, "wow": -0.0008}, "treasure": {"value": 4746.31, "wow": 0.0007}, "babymonster": {"value": 2860.03, "wow": 0.0052}, "alldayproject": {"value": 104.72, "wow": 0.0344}, "gidle": {"value": 1837.4, "wow": -0.0026}, "TaylorSwift": {"value": 18089.82, "wow": 0.0004}, "theweeknd": {"value": 4318.11, "wow": -0.0001}, "adele": {"value": 1937.77, "wow": 0.0049}, "dualipa": {"value": 1543.79, "wow": 0.0002}, "samsmith": {"value": 557.87, "wow": 0.0001}, "brunomars": {"value": 7430.65, "wow": 0.0073}, "arianagrande": {"value": 12530.32, "wow": 0.0013}}, "2026-01-26": {"bts": {"value": 103523.95, "wow": 0.0016}, "jungkook": {"value": 39619.95, "wow": 0.0004}, "seventeen": {"value": 7641.79, "wow": 0.0012}, "newjeans": {"value": 2983.48, "wow": -0.0001}, "lesserafim": {"value": 2109.68, "wow": 0.0027}, "txt": {"value": 6473.28, "wow": 0.0002}, "enhypen": {"value": 16191.5, "wow": 0.0042}, "boynextdoor": {"value": 728.3, "wow": 0.005}, "tws": {"value": 1332.68, "wow": 0.01}, "illit": {"value": 1023.54, "wow": null}, "katseye": {"value": 1819.65, "wow": 0.0155}, "cortis": {"value": 1702.52, "wow": 0.046}, "santosbravos": {"value": 32.86, "wow": null}, "straykids": {"value": 22693.97, "wow": 0.0021}, "twice": {"value": 13261.91, "wow": 0.0013}, "nmixx": {"value": 1040.33, "wow": -0.0002}, "itzy": {"value": 5042.39, "wow": -0.0009}, "niziu": {"value": 324.27, "wow": 0.0033}, "kickflip": {"value": 347.39, "wow": 0.007}, "riize": {"value": 806.59, "wow": 0.0056}, "aespa": {"value": 3940.26, "wow": -0.0002}, "nctdream": {"value": 6063.28, "wow": -0.0001}, "hearts2hearts": {"value": 426.92, "wow": 0.0182}, "nct127": {"value": 3769.13, "wow": -0.0008}, "treasure": {"value": 4745.89, "wow": -0.0001}, "babymonster": {"value": 2871.71, "wow": 0.0041}, "alldayproject": {"value": 107.74, "wow": 0.0289}, "gidle": {"value": 1833.47, "wow": -0.0021}, "TaylorSwift": {"value": 18095.79, "wow": 0.0003}, "theweeknd": {"value": 4319.24, "wow": 0.0003}, "adele": {"value": 1945.51, "wow": 0.004}, "dualipa": {"value": 1544.42, "wow": 0.0004}, "samsmith": {"value": 558.07, "wow": 0.0004}, "brunomars": {"value": 7447.65, "wow": 0.0023}, "arianagrande": {"value": 12536.23, "wow": 0.0005}}, "2026-02-02": {"bts": {"value": 103646.56, "wow": 0.0012}, "jungkook": {"value": 39654.74, "wow": 0.0009}, "seventeen": {"value": 7647.56, "wow": 0.0008}, "newjeans": {"value": 2983.9, "wow": 0.0001}, "lesserafim": {"value": 2117.27, "wow": 0.0036}, "txt": {"value": 6469.89, "wow": -0.0005}, "enhypen": {"value": 16244.73, "wow": 0.0033}, "boynextdoor": {"value": 731.35, "wow": 0.0042}, "tws": {"value": 1348.95, "wow": 0.0122}, "katseye": {"value": 1858.88, "wow": 0.0216}, "cortis": {"value": 1778.9, "wow": 0.0449}, "santosbravos": {"value": 34.67, "wow": 0.0551}, "straykids": {"value": 22733.56, "wow": 0.0017}, "twice": {"value": 13282.33, "wow": 0.0015}, "nmixx": {"value": 1039.99, "wow": -0.0003}, "itzy": {"value": 5039.43, "wow": -0.0006}, "niziu": {"value": 325.34, "wow": 0.0033}, "kickflip": {"value": 348.63, "wow": 0.0036}, "riize": {"value": 810.08, "wow": 0.0043}, "aespa": {"value": 3942.92, "wow": 0.0007}, "nctdream": {"value": 6064.75, "wow": 0.0002}, "hearts2hearts": {"value": 438.97, "wow": 0.0282}, "nct127": {"value": 3769.48, "wow": 0.0001}, "treasure": {"value": 4748.11, "wow": 0.0005}, "babymonster": {"value": 2890.38, "wow": 0.0065}, "alldayproject": {"value": 109.65, "wow": 0.0177}, "gidle": {"value": 1830.06, "wow": -0.0019}, "TaylorSwift": {"value": 18086.14, "wow": -0.0005}, "theweeknd": {"value": 4321.02, "wow": 0.0004}, "adele": {"value": 1932.66, "wow": -0.0066}, "dualipa": {"value": 1545.51, "wow": 0.0007}, "samsmith": {"value": 557.93, "wow": -0.0003}, "brunomars": {"value": 7454.79, "wow": 0.001}, "arianagrande": {"value": 12537.6, "wow": 0.0001}}, "2026-02-09": {"bts": {"value": 103776.58, "wow": 0.0013}, "jungkook": {"value": 39675.72, "wow": 0.0005}, "seventeen": {"value": 7653.66, "wow": 0.0008}, "newjeans": {"value": 2984.19, "wow": 0.0001}, "lesserafim": {"value": 2121.1, "wow": 0.0018}, "txt": {"value": 6474.37, "wow": 0.0007}, "enhypen": {"value": 16292.58, "wow": 0.0029}, "boynextdoor": {"value": 734.58, "wow": 0.0044}, "tws": {"value": 1359.87, "wow": 0.0081}, "katseye": {"value": 1897.81, "wow": 0.0209}, "cortis": {"value": 1874.56, "wow": 0.0538}, "santosbravos": {"value": 36.37, "wow": 0.049}, "straykids": {"value": 22849.32, "wow": 0.0051}, "twice": {"value": 13292.58, "wow": 0.0008}, "nmixx": {"value": 1039.16, "wow": -0.0008}, "itzy": {"value": 5033.74, "wow": -0.0011}, "niziu": {"value": 325.01, "wow": -0.001}, "kickflip": {"value": 349.67, "wow": 0.003}, "riize": {"value": 814.16, "wow": 0.005}, "aespa": {"value": 3944.82, "wow": 0.0005}, "nctdream": {"value": 6065.82, "wow": 0.0002}, "hearts2hearts": {"value": 448.57, "wow": 0.0219}, "nct127": {"value": 3768.07, "wow": -0.0004}, "treasure": {"value": 4749.89, "wow": 0.0004}, "babymonster": {"value": 2910.59, "wow": 0.007}, "alldayproject": {"value": 110.81, "wow": 0.0106}, "gidle": {"value": 1824.85, "wow": -0.0028}, "TaylorSwift": {"value": 18101.26, "wow": 0.0008}, "theweeknd": {"value": 4323.7, "wow": 0.0006}, "adele": {"value": 1938.84, "wow": 0.0032}, "dualipa": {"value": 1546.27, "wow": 0.0005}, "samsmith": {"value": 558.34, "wow": 0.0007}, "brunomars": {"value": 7464.96, "wow": 0.0014}, "arianagrande": {"value": 12542.62, "wow": 0.0004}}}, "skinbooster": {"2025-11-24": {"rejuran": {"value": 54.99, "wow": 0.0126}, "juvelook": {"value": 15.0, "wow": 0.0088}}, "2025-12-01": {"rejuran": {"value": 55.55, "wow": 0.01}, "juvelook": {"value": 15.14, "wow": 0.0093}}, "2025-12-08": {"rejuran": {"value": 56.05, "wow": 0.0091}, "juvelook": {"value": 15.26, "wow": 0.008}}, "2025-12-15": {"rejuran": {"value": 56.62, "wow": 0.0102}, "juvelook": {"value": 15.4, "wow": 0.0088}}, "2025-12-22": {"rejuran": {"value": 57.1, "wow": 0.0085}, "juvelook": {"value": 15.54, "wow": 0.009}}, "2025-12-29": {"rejuran": {"value": 57.52, "wow": 0.0073}, "juvelook": {"value": 15.63, "wow": 0.0064}}, "2026-01-05": {"rejuran": {"value": 58.0, "wow": 0.0083}, "juvelook": {"value": 15.72, "wow": 0.0052}}, "2026-01-12": {"rejuran": {"value": 58.56, "wow": 0.0098}, "juvelook": {"value": 15.86, "wow": 0.0094}}, "2026-01-19": {"rejuran": {"value": 59.45, "wow": 0.0151}, "juvelook": {"value": 16.18, "wow": 0.0198}}, "2026-01-26": {"rejuran": {"value": 59.45, "wow": 0.0}, "juvelook": {"value": 16.18, "wow": 0.0002}}, "2026-02-02": {"rejuran": {"value": 59.96, "wow": 0.0086}, "juvelook": {"value": 16.28, "wow": 0.0062}}, "2026-02-09": {"rejuran": {"value": 60.46, "wow": 0.0083}, "juvelook": {"value": 16.38, "wow": 0.0061}}}}, "delta": {"views": {"1월10일": {"bts": 366656212, "jungkook": 123337194, "katseye": 175686789, "cortis": 278525464, "enhypen": 195428596, "seventeen": 44669877, "txt": 35411804, "lesserafim": 63119818, "tws": 33162226, "Twice": 73380966, "straykids": 198025431, "NMIXX": 8453233, "alldayproject": 24701759, "blackpink": 363088889, "treasure": 59920062, "babymonster": 71899808, "aespa": 55296800, "nct": 27329682, "riize": 25823725, "hearts2hearts": 25977392, "gidle": 5475019, "anua": 9678173, "cosrx": 4834597, "manyo": 256292, "reedleshot": 815147, "beautyofjoseon": 1825346, "mixsoon": 3442328, "skin1004": 24865732, "romand": 3363692, "clio": 3384712, "mediheal": 857459, "torriden": 1277355, "missha": 1179857, "dalba": 1336582, "tirtir": 2123521, "medicube": 26975419, "buldak": 32500209, "buldakcarbonara": 3853149}, "1월11일": {"bts": 323663006, "jungkook": 131216321, "katseye": 174302347, "cortis": 266678600, "enhypen": 214242508, "seventeen": 57499475, "txt": 25027707, "lesserafim": 82076973, "tws": 47641730, "Twice": 99356812, "straykids": 218169267, "NMIXX": 9686527, "alldayproject": 19679846, "blackpink": 435026155, "treasure": 38376051, "babymonster": 48036964, "aespa": 49805786, "nct": 34003282, "riize": 30734651, "hearts2hearts": 29930876, "gidle": 3507192, "anua": 5731103, "cosrx": 5195445, "manyo": 233443, "reedleshot": 1101194, "beautyofjoseon": 2276414, "mixsoon": 3705060, "skin1004": 25019036, "romand": 2345978, "clio": 2487282, "mediheal": 996281, "torriden": 1190088, "missha": 612034, "dalba": 1477209, "tirtir": 4202182, "medicube": 26834744, "buldak": 27777556, "buldakcarbonara": 3346416}, "1월12일": {"bts": 316077596, "jungkook": 141278411, "katseye": 146731188, "cortis": 204847804, "enhypen": 150224656, "seventeen": 46451413, "txt": 51347262, "lesserafim": 48963598, "tws": 36980077, "Twice": 64773313, "straykids": 153250757, "NMIXX": 6730452, "alldayproject": 15805828, "blackpink": 324609977, "treasure": 50327278, "babymonster": 64132546, "aespa": 42584566, "nct": 22236776, "riize": 23808470, "hearts2hearts": 22025312, "gidle": 6704707, "anua": 4705797, "cosrx": 4501196, "manyo": 540196, "reedleshot": 1172024, "beautyofjoseon": 2724582, "mixsoon": 3216086, "skin1004": 19362815, "romand": 4777653, "clio": 5722717, "mediheal": 745464, "torriden": 1012176, "missha": 2220705, "dalba": 2690357, "tirtir": 2579009, "medicube": 29324449, "buldak": 39577124, "buldakcarbonara": 4657819}, "1월13일": {"bts": 490033530, "jungkook": 143239644, "katseye": 123841445, "cortis": 202183976, "enhypen": 160946567, "seventeen": 46812091, "txt": 27451477, "lesserafim": 44047973, "tws": 21041768, "Twice": 48668062, "straykids": 210428684, "NMIXX": 6871692, "alldayproject": 16911660, "blackpink": 283526762, "treasure": 8158329, "babymonster": 45981508, "aespa": 44930183, "nct": 27063759, "riize": 23435120, "hearts2hearts": 26144664, "gidle": 1918521, "anua": 5558566, "cosrx": 7102148, "manyo": 197202, "reedleshot": 895118, "beautyofjoseon": 2791043, "mixsoon": 7991316, "skin1004": 16222108, "romand": 3432686, "clio": 4470237, "mediheal": 2221449, "torriden": 1202904, "missha": 1182872, "dalba": 1695039, "tirtir": 2616293, "medicube": 39732862, "buldak": 29336719, "buldakcarbonara": 3895652}, "1월14일": {"bts": 607110969, "jungkook": 163494513, "katseye": 131285831, "cortis": 186981008, "enhypen": 120992232, "seventeen": 29403347, "txt": 17526736, "lesserafim": 26620677, "tws": 32277348, "Twice": 102914682, "straykids": 152215785, "NMIXX": 6493212, "alldayproject": 5802683, "blackpink": 243233635, "treasure": 56845988, "babymonster": 52617719, "aespa": 41742781, "nct": 25095095, "riize": 17562916, "hearts2hearts": 12396611, "gidle": 6134124, "anua": 5811015, "cosrx": 6738059, "manyo": 997325, "reedleshot": 1315964, "beautyofjoseon": 3304513, "mixsoon": 9023806, "skin1004": 18264498, "romand": 2357396, "clio": 4506854, "mediheal": 1142681, "torriden": 1577231, "missha": 414091, "dalba": 2545402, "tirtir": 2807690, "medicube": 28675300, "buldak": 30573232, "buldakcarbonara": 3876599}, "1월15일": {"bts": 520051574, "jungkook": 154104549, "katseye": 132299419, "cortis": 150475063, "enhypen": 152026729, "seventeen": 41924668, "txt": 31004817, "lesserafim": 59286257, "tws": 18518594, "Twice": 75609742, "straykids": 153612713, "NMIXX": 7200945, "alldayproject": 29065493, "blackpink": 316545953, "treasure": 21014342, "babymonster": 83608301, "aespa": 38403800, "nct": 26815079, "riize": 11941332, "hearts2hearts": 48840057, "gidle": 3624451, "anua": 14843709, "cosrx": 6677376, "manyo": 288323, "reedleshot": 1588682, "beautyofjoseon": 2239993, "mixsoon": 4128624, "skin1004": 27443189, "romand": 6271034, "clio": 2679958, "mediheal": 822363, "torriden": 1417800, "missha": 1699818, "dalba": 2207541, "tirtir": 2765085, "medicube": 37779935, "buldak": 26045557, "buldakcarbonara": 3716775}, "1월16일": {"bts": 635626251, "jungkook": 164519872, "katseye": 125414686, "cortis": 207159533, "enhypen": 212048174, "seventeen": 69545796, "txt": 44019056, "lesserafim": 50178169, "tws": 19819301, "Twice": 69984452, "straykids": 180890647, "NMIXX": 7709830, "alldayproject": 14981093, "blackpink": 332449769, "treasure": 61917837, "babymonster": 65124598, "aespa": 49140486, "nct": 32375605, "riize": 23210494, "hearts2hearts": 24825282, "gidle": 6694666, "anua": 5744722, "cosrx": 7036085, "manyo": 532749, "reedleshot": 1082962, "beautyofjoseon": 2285301, "mixsoon": 7455448, "skin1004": 34227885, "romand": 4539316, "clio": 2745184, "mediheal": 1061095, "torriden": 1452317, "missha": 831252, "dalba": 2096851, "tirtir": 4160112, "medicube": 30296496, "buldak": 33674286, "buldakcarbonara": 4121029}, "1월17일": {"bts": 526907224, "jungkook": 149853157, "katseye": 140674748, "cortis": 150438550, "enhypen": 158963296, "seventeen": 42846230, "txt": 17237698, "lesserafim": 46682984, "tws": 19624849, "Twice": 42749909, "straykids": 167592661, "NMIXX": 6790587, "alldayproject": 10743269, "blackpink": 349539548, "treasure": 38210294, "babymonster": 68815061, "aespa": 45294838, "nct": 32046879, "riize": 10670043, "hearts2hearts": 47604646, "gidle": 3102231, "anua": 4992120, "cosrx": 6791332, "manyo": 68680, "reedleshot": 773928, "beautyofjoseon": 2947826, "mixsoon": 6321979, "skin1004": 28645009, "romand": 4248119, "clio": 5873459, "mediheal": 632408, "torriden": 1742541, "missha": 1009125, "dalba": 1840520, "tirtir": 4203070, "medicube": 28195907, "buldak": 28835664, "buldakcarbonara": 3078977}, "1월18일": {"bts": 506041344, "jungkook": 155509521, "katseye": 125623210, "cortis": 258390372, "enhypen": 241734863, "seventeen": 56386583, "txt": 33935308, "lesserafim": 61565341, "tws": 19977560, "Twice": 73684212, "straykids": 181865239, "NMIXX": 12247957, "alldayproject": 4462938, "blackpink": 302669908, "treasure": 69257935, "babymonster": 63591412, "aespa": 46696013, "nct": 32703305, "riize": 26818218, "hearts2hearts": 34980583, "gidle": 5408330, "anua": 10071946, "cosrx": 6225507, "manyo": 550105, "reedleshot": 1661637, "beautyofjoseon": 2685433, "mixsoon": 3400622, "skin1004": 34210916, "romand": 1809531, "clio": 5499072, "mediheal": 890496, "torriden": 1216609, "missha": 1531499, "dalba": 1538251, "tirtir": 2842506, "medicube": 27566490, "buldak": 44449140, "buldakcarbonara": 5210511}, "1월19일": {"bts": 450020769, "jungkook": 118986046, "katseye": 140745198, "cortis": 115374968, "enhypen": 183625163, "seventeen": 27827499, "txt": 43626794, "lesserafim": 40559039, "tws": 18737785, "Twice": 115941898, "straykids": 165325228, "NMIXX": 10387655, "alldayproject": 18416948, "blackpink": 268637175, "treasure": 19692483, "babymonster": 55278525, "aespa": 40162583, "nct": 31411865, "riize": 8570736, "hearts2hearts": 26079976, "gidle": 4539415, "anua": 4566016, "cosrx": 3080167, "manyo": 851010, "reedleshot": 988122, "beautyofjoseon": 2773767, "mixsoon": 4942985, "skin1004": 26374359, "romand": 5035450, "clio": 1236044, "mediheal": 810175, "torriden": 1878975, "missha": 1239008, "dalba": 1635270, "tirtir": 3131929, "medicube": 24425472, "buldak": 26383048, "buldakcarbonara": 4149685}, "1월20일": {"bts": 403047119, "jungkook": 208667963, "katseye": 121000511, "cortis": 156452379, "enhypen": 179123170, "seventeen": 56279554, "txt": 29736087, "lesserafim": 46291659, "tws": 18357309, "Twice": 66433270, "straykids": 149327678, "NMIXX": 8865057, "alldayproject": 9421386, "blackpink": 241913896, "treasure": 64347164, "babymonster": 48989150, "aespa": 38546275, "nct": 26482407, "riize": 20632998, "hearts2hearts": 24865371, "gidle": 7699946, "anua": 4680613, "cosrx": 3630361, "manyo": 813464, "reedleshot": 687410, "beautyofjoseon": 3321814, "mixsoon": 4297013, "skin1004": 23882989, "romand": 4063841, "clio": 3038722, "mediheal": 661601, "torriden": 1201268, "missha": 1200079, "dalba": 2049249, "tirtir": 2709694, "medicube": 28095630, "buldak": 33699387, "buldakcarbonara": 2611021}, "1월21일": {"bts": 435758303, "jungkook": 110055442, "katseye": 123505118, "cortis": 196813833, "enhypen": 199229798, "seventeen": 45450702, "txt": 20643377, "lesserafim": 31001293, "tws": 16468224, "Twice": 30180404, "straykids": 167362820, "NMIXX": 6500872, "alldayproject": 4114049, "blackpink": 243228462, "treasure": 14367314, "babymonster": 51219136, "aespa": 39258780, "nct": 19451023, "riize": 12953211, "hearts2hearts": 27780708, "gidle": 1312744, "anua": 4291349, "cosrx": 3310592, "manyo": 285213, "reedleshot": 1352998, "beautyofjoseon": 2824058, "mixsoon": 3688415, "skin1004": 19448515, "romand": 2996953, "clio": 3530631, "mediheal": 729194, "torriden": 1324820, "missha": 948670, "dalba": 2573590, "tirtir": 2870467, "medicube": 30076619, "buldak": 34697711, "buldakcarbonara": 4045386}, "1월22일": {"bts": 477700423, "jungkook": 77594128, "katseye": 107208662, "cortis": 147659299, "enhypen": 154871401, "seventeen": 44552811, "txt": 40756421, "lesserafim": 44719087, "tws": 15328328, "Twice": 109675529, "straykids": 155900755, "NMIXX": 7414073, "alldayproject": 7725968, "blackpink": 251809072, "treasure": 51287969, "babymonster": 51260740, "aespa": 39295911, "nct": 26246482, "riize": 13559545, "hearts2hearts": 24401346, "gidle": 8240892, "anua": 7865803, "cosrx": 4043724, "manyo": 600944, "reedleshot": 807113, "beautyofjoseon": 3008789, "mixsoon": 3764380, "skin1004": 18885125, "romand": 1562299, "clio": 5621603, "mediheal": 656261, "torriden": 1294107, "missha": 1153389, "dalba": 2706153, "tirtir": 2790099, "medicube": 26649769, "buldak": 38799191, "buldakcarbonara": 4489165}, "1월23일": {"bts": 378361140, "jungkook": 189996017, "katseye": 119568053, "cortis": 124511565, "enhypen": 160136719, "seventeen": 48185647, "txt": 30265489, "lesserafim": 19740927, "tws": 18615907, "Twice": 37642682, "straykids": 141743771, "NMIXX": 10154154, "alldayproject": 12595728, "blackpink": 251114953, "treasure": 43917755, "babymonster": 23131081, "aespa": 43804805, "nct": 23246178, "riize": 12951836, "hearts2hearts": 24889288, "gidle": 1780899, "anua": 3889431, "cosrx": 3834125, "manyo": 199265, "reedleshot": 820734, "beautyofjoseon": 2786483, "mixsoon": 3656623, "skin1004": 29675670, "romand": 4134164, "clio": 1374724, "mediheal": 851382, "torriden": 561419, "missha": 390088, "dalba": 2746039, "tirtir": 1876653, "medicube": 21244912, "buldak": 19358956, "buldakcarbonara": 3734264}, "1월24일": {"bts": 679290562, "jungkook": 178705496, "katseye": 135762741, "cortis": 189657472, "enhypen": 200219544, "seventeen": 56029078, "txt": 35360410, "lesserafim": 64408537, "tws": 19116034, "Twice": 123287729, "straykids": 159511042, "NMIXX": 7430050, "alldayproject": 10071884, "blackpink": 227139858, "treasure": 40614833, "babymonster": 82111001, "aespa": 43940500, "nct": 25662009, "riize": 16947339, "hearts2hearts": 23923362, "gidle": 8833269, "anua": 5673096, "cosrx": 4477002, "manyo": 585400, "reedleshot": 857214, "beautyofjoseon": 3562083, "mixsoon": 4995068, "skin1004": 27523784, "romand": 7082689, "clio": 3832161, "mediheal": 779664, "torriden": 2501972, "missha": 1727567, "dalba": 1572063, "tirtir": 2853632, "medicube": 28720074, "buldak": 51284933, "buldakcarbonara": 4941793}, "1월25일": {"bts": 442309373, "jungkook": 91934479, "katseye": 106671503, "cortis": 138588960, "enhypen": 190633826, "seventeen": 53098198, "txt": 19456639, "lesserafim": 22455873, "tws": 20703379, "Twice": 86302981, "straykids": 169411160, "NMIXX": 5192676, "alldayproject": 7321030, "blackpink": 220391413, "treasure": 42740807, "babymonster": 50852968, "aespa": 47406249, "nct": 32644611, "riize": 13039496, "hearts2hearts": 40190120, "gidle": 3355550, "anua": 10015582, "cosrx": 4119322, "manyo": 294098, "reedleshot": 1733268, "beautyofjoseon": 2538528, "mixsoon": 4162293, "skin1004": 28598987, "romand": 3307567, "clio": 5070777, "mediheal": 772080, "torriden": 1385153, "missha": 759193, "dalba": 3716342, "tirtir": 3945938, "medicube": 22374778, "buldak": 30871182, "buldakcarbonara": 4932880}, "1월26일": {"bts": 400736705, "jungkook": 51792417, "katseye": 88780785, "cortis": 153559385, "enhypen": 124002202, "seventeen": 128777215, "txt": 20680302, "lesserafim": 48107172, "tws": 12069838, "illit": 30430151, "Twice": 55645271, "straykids": 149061204, "NMIXX": 7762086, "alldayproject": 3711980, "blackpink": 277606200, "treasure": 28672624, "babymonster": 47776143, "aespa": 37172327, "nct": 23779144, "riize": 14295965, "hearts2hearts": 25228534, "gidle": 2562584, "anua": 3533665, "cosrx": 3249272, "manyo": 789216, "reedleshot": 788830, "beautyofjoseon": 2189652, "mixsoon": 3506093, "skin1004": 26729439, "romand": 4172003, "clio": 5569384, "mediheal": 515587, "torriden": 1213416, "missha": 551316, "dalba": 1976898, "tirtir": 2301893, "medicube": 15076330, "buldak": 23837609, "buldakcarbonara": 3251497}, "1월27일": {"bts": 424925961, "jungkook": 39036937, "katseye": 106962724, "cortis": 95644635, "enhypen": 142556579, "seventeen": 137100463, "txt": 46967607, "lesserafim": 38386423, "tws": 19676297, "illit": 30430150, "Twice": 32646769, "straykids": 121198962, "NMIXX": 6066502, "alldayproject": 10171160, "blackpink": 264766448, "treasure": 22242530, "babymonster": 38622587, "aespa": 43223315, "nct": 22886954, "riize": 11219856, "hearts2hearts": 10552304, "gidle": 4567120, "anua": 5845857, "cosrx": 5549114, "manyo": 542555, "reedleshot": 1891148, "beautyofjoseon": 2645872, "mixsoon": 5437129, "skin1004": 25114985, "romand": 2961631, "clio": 1277852, "mediheal": 1194353, "torriden": 1072721, "missha": 73683, "dalba": 2024852, "tirtir": 3615155, "medicube": 17693669, "buldak": 14737456, "buldakcarbonara": 4180800}, "1월28일": {"bts": 291079509, "jungkook": 46442650, "katseye": 146461830, "cortis": 94910940, "enhypen": 160730377, "seventeen": 188966254, "txt": 28582468, "lesserafim": 26948297, "tws": 16983451, "illit": 30430150, "Twice": 110888890, "straykids": 193666690, "NMIXX": 3981411, "alldayproject": 8311608, "blackpink": 210069926, "treasure": 43973997, "babymonster": 51302052, "aespa": 37039201, "nct": 21867194, "riize": 11080854, "hearts2hearts": 25644551, "gidle": 8996405, "anua": 4930249, "cosrx": 5168375, "manyo": 630762, "reedleshot": 1295585, "beautyofjoseon": 3450539, "mixsoon": 3584408, "skin1004": 22499396, "romand": 5756771, "clio": 3349061, "mediheal": 735236, "torriden": 1102159, "missha": 1770893, "dalba": 1243712, "tirtir": 3104747, "medicube": 27463122, "buldak": 47420347, "buldakcarbonara": 4029542}, "1월29일": {"bts": 399394001, "jungkook": 35832753, "katseye": 107557119, "cortis": 205737461, "enhypen": 116022584, "seventeen": 50888725, "txt": 26871914, "lesserafim": 26175733, "tws": 18012360, "illit": 30430151, "Twice": 26772383, "straykids": 109545790, "NMIXX": 10019614, "alldayproject": 5701612, "blackpink": 192554013, "treasure": 29664220, "babymonster": 42352239, "aespa": 37445594, "nct": 30969679, "riize": 13725207, "hearts2hearts": 34604031, "gidle": 1891218, "anua": 4667653, "cosrx": 5722082, "manyo": 515578, "reedleshot": 2634823, "beautyofjoseon": 2996304, "mixsoon": 5672720, "skin1004": 31177139, "romand": 889056, "clio": 3500815, "mediheal": 1103314, "torriden": 1060154, "missha": 2546939, "dalba": 3019794, "tirtir": 3454960, "medicube": 26075935, "buldak": 34068792, "buldakcarbonara": 4830500}, "1월30일": {"bts": 366428812, "jungkook": 43183972, "katseye": 130293386, "cortis": 122741960, "enhypen": 154377204, "seventeen": 243946520, "txt": 29109669, "lesserafim": 52187582, "tws": 17611776, "illit": 30430150, "Twice": 78037238, "straykids": 157258406, "NMIXX": 5312854, "alldayproject": 3920843, "blackpink": 298170246, "treasure": 51097094, "babymonster": 58121881, "aespa": 42255493, "nct": 19416911, "riize": 11376127, "hearts2hearts": 27411092, "gidle": 6250100, "anua": 3842971, "cosrx": 4766538, "manyo": 367245, "reedleshot": 1846571, "beautyofjoseon": 3356361, "mixsoon": 2987233, "skin1004": 31652554, "romand": 4428525, "clio": 7739708, "mediheal": 1189950, "torriden": 1717240, "missha": 1158579, "dalba": 2066550, "tirtir": 3125312, "medicube": 28039816, "buldak": 24958418, "buldakcarbonara": 3605805}, "1월31일": {"bts": 346669633, "jungkook": 51530513, "katseye": 157816114, "cortis": 126000312, "enhypen": 108416166, "seventeen": 105308916, "txt": 31442964, "lesserafim": 24609478, "tws": 17206355, "Twice": 76982056, "straykids": 111938350, "NMIXX": 6857613, "alldayproject": 9966400, "blackpink": 290829223, "treasure": 49981682, "babymonster": 54757546, "aespa": 55480429, "nct": 29112471, "riize": 5104210, "hearts2hearts": 44842149, "gidle": 6146389, "anua": 7524202, "cosrx": 6069256, "manyo": 451438, "reedleshot": 1925450, "beautyofjoseon": 4107137, "mixsoon": 5988692, "skin1004": 32934348, "romand": 3803372, "clio": 1648210, "mediheal": 3627979, "torriden": 1494350, "missha": 1043192, "dalba": 2421852, "tirtir": 3372647, "medicube": 35075490, "buldak": 17695450, "buldakcarbonara": 4752087}, "2월1일": {"bts": 329433437, "jungkook": 30563698, "katseye": 134993308, "cortis": 81631186, "enhypen": 175882993, "seventeen": 174066850, "txt": 34499384, "lesserafim": 54576633, "tws": 19802506, "Twice": 98707537, "straykids": 130148781, "NMIXX": 6292078, "alldayproject": 7004784, "blackpink": 251954802, "treasure": 43529468, "babymonster": 51613351, "aespa": 58243259, "nct": 46970833, "riize": 19561322, "hearts2hearts": 53285935, "gidle": 8644670, "anua": 4751982, "cosrx": 3832560, "manyo": 414067, "reedleshot": 1018689, "beautyofjoseon": 4026191, "mixsoon": 2943957, "skin1004": 47171978, "romand": 5959885, "clio": 7691831, "mediheal": 601274, "torriden": 1192092, "missha": 690148, "dalba": 2378644, "tirtir": 4253100, "medicube": 27149275, "buldak": 36485957, "buldakcarbonara": 2886439}, "2월2일": {"bts": 318836583, "jungkook": 109077069, "katseye": 322425272, "cortis": 199665615, "enhypen": 180201916, "seventeen": 59715512, "txt": 22943187, "lesserafim": 13902634, "tws": 16585579, "Twice": 74486522, "straykids": 165402726, "NMIXX": 5234656, "alldayproject": 5245251, "blackpink": 282751848, "treasure": 42520567, "babymonster": 45480672, "aespa": 50309065, "nct": 20780710, "riize": 20378034, "hearts2hearts": 14206805, "gidle": 4816540, "anua": 3931291, "cosrx": 4623543, "manyo": 411630, "reedleshot": 489150, "beautyofjoseon": 2744133, "mixsoon": 2656698, "skin1004": 42785624, "romand": 3575138, "clio": 6260186, "mediheal": 558620, "torriden": 2009073, "missha": 1068677, "dalba": 2443788, "tirtir": 4709701, "medicube": 27114505, "buldak": 38236809, "buldakcarbonara": 5807660}, "2월3일": {"bts": 355566808, "jungkook": 148772910, "katseye": 222596341, "cortis": 70135110, "enhypen": 43521429, "seventeen": 47304096, "txt": 26625718, "lesserafim": 52297807, "tws": 15426386, "Twice": 56535354, "straykids": 146461539, "NMIXX": 6232902, "alldayproject": 5231361, "blackpink": 259338477, "treasure": 40160235, "babymonster": 39576291, "aespa": 43830078, "nct": 40442893, "riize": 15217033, "hearts2hearts": 35082140, "gidle": 5474533, "anua": 3849380, "cosrx": 3003797, "manyo": 372973, "reedleshot": 702782, "beautyofjoseon": 2864446, "mixsoon": 14862768, "skin1004": 34483401, "romand": 3635393, "clio": 5733594, "mediheal": 614473, "torriden": 1441698, "missha": 1812016, "dalba": 1730492, "tirtir": 3635941, "medicube": 25215450, "buldak": 25427214, "buldakcarbonara": 4027107}, "2월4일": {"bts": 300392304, "jungkook": 130025657, "katseye": 229395632, "cortis": 131183744, "enhypen": 132758674, "seventeen": 32968032, "txt": 28500624, "lesserafim": 28851226, "tws": 14833461, "Twice": 59357886, "straykids": 145396945, "NMIXX": 5698365, "alldayproject": 5162764, "blackpink": 219392654, "treasure": 43553801, "babymonster": 54408976, "aespa": 43358472, "nct": 30188101, "riize": 14501503, "hearts2hearts": 55874633, "gidle": 4676039, "anua": 4655701, "cosrx": 3665698, "manyo": 251819, "reedleshot": 1089411, "beautyofjoseon": 2024784, "mixsoon": 3180755, "skin1004": 24203112, "romand": 4291635, "clio": 5842501, "mediheal": 496161, "torriden": 1253060, "missha": 667793, "dalba": 1426517, "tirtir": 2912005, "medicube": 25297419, "buldak": 21991367, "buldakcarbonara": 3098739}, "2월5일": {"bts": 315358111, "jungkook": 88957600, "katseye": 243154974, "cortis": 131119643, "enhypen": 224951625, "seventeen": 48760795, "txt": 10958060, "lesserafim": 15936439, "tws": 8385452, "Twice": 66959349, "straykids": 212630784, "NMIXX": 4439324, "alldayproject": 3862802, "blackpink": 265580330, "treasure": 41537411, "babymonster": 72445728, "aespa": 42195538, "nct": 28822734, "riize": 13309396, "hearts2hearts": 11298075, "gidle": 2669868, "anua": 5791844, "cosrx": 3194164, "manyo": 557093, "reedleshot": 1173786, "beautyofjoseon": 3040174, "mixsoon": 5028400, "skin1004": 23663923, "romand": 3513314, "clio": 8093500, "mediheal": 513264, "torriden": 2223493, "missha": 1458542, "dalba": 1845657, "tirtir": 3175925, "medicube": 23507818, "buldak": 40368699, "buldakcarbonara": 4705808}, "2월6일": {"bts": 279364881, "jungkook": 180951580, "katseye": 253961059, "cortis": 262939941, "enhypen": 115495449, "seventeen": 40226048, "txt": 36920829, "lesserafim": 40638831, "tws": 23250766, "Twice": 58562003, "straykids": 154570078, "NMIXX": 8006649, "alldayproject": 7892367, "blackpink": 224142638, "treasure": 43365290, "babymonster": 100890403, "aespa": 42509045, "nct": 34221971, "riize": 17967111, "hearts2hearts": 48161089, "gidle": 7899661, "anua": 4132058, "cosrx": 3637728, "manyo": 251983, "reedleshot": 1180791, "beautyofjoseon": 2297704, "mixsoon": 2335281, "skin1004": 24208796, "romand": 3848777, "clio": 7504440, "mediheal": 1535632, "torriden": 2190571, "missha": 1309219, "dalba": 1434279, "tirtir": 3373738, "medicube": 30973321, "buldak": 13993026, "buldakcarbonara": 3512716}, "2월7일": {"bts": 377964799, "jungkook": 131463338, "katseye": 258640010, "cortis": 177234697, "enhypen": 146568127, "seventeen": 43778565, "txt": 27421537, "lesserafim": 31541384, "tws": 17542870, "Twice": 67871038, "straykids": 180027199, "NMIXX": 5460627, "alldayproject": 2423609, "blackpink": 228854134, "treasure": 50206690, "babymonster": 91218173, "aespa": 46510554, "nct": 30195735, "riize": 14746798, "hearts2hearts": 36622700, "gidle": 5344216, "anua": 4046846, "cosrx": 3427964, "manyo": 252455, "reedleshot": 1252321, "beautyofjoseon": 3247089, "mixsoon": 3915778, "skin1004": 20593712, "romand": 3536609, "clio": 9710685, "mediheal": 1406954, "torriden": 2613954, "missha": 1343523, "dalba": 1674898, "tirtir": 3124444, "medicube": 17206373, "buldak": 43485309, "buldakcarbonara": 4190840}, "2월8일": {"bts": 290984490, "jungkook": 67874702, "katseye": 221923401, "cortis": 148739295, "enhypen": 148736636, "seventeen": 48722630, "txt": 31623944, "lesserafim": 36198716, "tws": 7340962, "Twice": 20932515, "straykids": 217936605, "NMIXX": 7684219, "alldayproject": 7731929, "blackpink": 220047090, "treasure": 45966435, "babymonster": 60534860, "aespa": 48879032, "nct": 32964192, "riize": 13779599, "hearts2hearts": 35194804, "gidle": 5112589, "anua": 7620332, "cosrx": 3482188, "manyo": 254965, "reedleshot": 1232738, "beautyofjoseon": 2732781, "mixsoon": 2912694, "skin1004": 27129238, "romand": 5939605, "clio": 7612846, "mediheal": 1187511, "torriden": 1725304, "missha": 1506276, "dalba": 1283609, "tirtir": 3106203, "medicube": 31130706, "buldak": 39639772, "buldakcarbonara": 6103704}}, "videos": {"1월10일": {"bts": 12194, "jungkook": 1162, "katseye": 7152, "cortis": 24434, "enhypen": 14118, "seventeen": -2677, "txt": 908, "lesserafim": 1014, "tws": 3242, "Twice": 2707, "straykids": 14482, "NMIXX": 526, "alldayproject": 990, "blackpink": 12350, "treasure": 973, "babymonster": 2652, "aespa": 571, "nct": -433, "riize": 1420, "hearts2hearts": 1005, "gidle": -651, "anua": 422, "cosrx": 687, "manyo": 14, "reedleshot": 35, "beautyofjoseon": 178, "mixsoon": 249, "skin1004": 2859, "romand": 257, "clio": 214, "mediheal": 77, "torriden": 314, "missha": 222, "dalba": 355, "tirtir": 211, "medicube": 1622, "buldak": 491, "buldakcarbonara": 89}, "1월11일": {"bts": 7920, "jungkook": 808, "katseye": 8473, "cortis": 18894, "enhypen": 9311, "seventeen": -73, "txt": -397, "lesserafim": 1546, "tws": 2481, "Twice": 1757, "straykids": 11580, "NMIXX": -58, "alldayproject": 802, "blackpink": 7142, "treasure": 270, "babymonster": 1608, "aespa": 271, "nct": -310, "riize": 1539, "hearts2hearts": 1053, "gidle": -485, "anua": 552, "cosrx": 659, "manyo": 37, "reedleshot": 49, "beautyofjoseon": 188, "mixsoon": 293, "skin1004": 2674, "romand": 214, "clio": 78, "mediheal": 94, "torriden": 317, "missha": 135, "dalba": 413, "tirtir": 359, "medicube": 1519, "buldak": 372, "buldakcarbonara": 88}, "1월12일": {"bts": 9578, "jungkook": 1437, "katseye": 5430, "cortis": 18995, "enhypen": 4853, "seventeen": 1052, "txt": 49, "lesserafim": 241, "tws": 2559, "Twice": 539, "straykids": 5753, "NMIXX": -99, "alldayproject": 556, "blackpink": 5991, "treasure": -92, "babymonster": 2829, "aespa": -163, "nct": -694, "riize": 425, "hearts2hearts": 1081, "gidle": -1487, "anua": 542, "cosrx": 703, "manyo": 68, "reedleshot": 30, "beautyofjoseon": 176, "mixsoon": 351, "skin1004": 2896, "romand": 351, "clio": 160, "mediheal": -17, "torriden": 380, "missha": 328, "dalba": 414, "tirtir": 260, "medicube": 1886, "buldak": 515, "buldakcarbonara": 82}, "1월13일": {"bts": 68240, "jungkook": 5436, "katseye": 3847, "cortis": 19138, "enhypen": 3549, "seventeen": 1144, "txt": -199, "lesserafim": 363, "tws": 996, "Twice": 878, "straykids": 7467, "NMIXX": 22, "alldayproject": 625, "blackpink": 7466, "treasure": -48, "babymonster": 1426, "aespa": -375, "nct": -705, "riize": 678, "hearts2hearts": 984, "gidle": -172, "anua": 395, "cosrx": 811, "manyo": 22, "reedleshot": 75, "beautyofjoseon": 244, "mixsoon": 225, "skin1004": 3089, "romand": 304, "clio": 173, "mediheal": 61, "torriden": 347, "missha": 140, "dalba": 430, "tirtir": 318, "medicube": 1562, "buldak": 348, "buldakcarbonara": 77}, "1월14일": {"bts": 51207, "jungkook": 5622, "katseye": 4612, "cortis": 11690, "enhypen": 3939, "seventeen": 50, "txt": -192, "lesserafim": 795, "tws": 2664, "Twice": 2884, "straykids": -2436, "NMIXX": -244, "alldayproject": 139, "blackpink": 9081, "treasure": 452, "babymonster": 1011, "aespa": 354, "nct": 305, "riize": 496, "hearts2hearts": 637, "gidle": -608, "anua": 260, "cosrx": 773, "manyo": 75, "reedleshot": 28, "beautyofjoseon": 231, "mixsoon": 377, "skin1004": 3054, "romand": 211, "clio": 220, "mediheal": 66, "torriden": 400, "missha": 71, "dalba": 413, "tirtir": 288, "medicube": 1884, "buldak": 464, "buldakcarbonara": 86}, "1월15일": {"bts": 41951, "jungkook": 6927, "katseye": 4935, "cortis": 10311, "enhypen": 6749, "seventeen": 973, "txt": 328, "lesserafim": 389, "tws": 1973, "Twice": 3113, "straykids": 730, "NMIXX": 314, "alldayproject": 872, "blackpink": 14214, "treasure": 93, "babymonster": 1730, "aespa": 251, "nct": -204, "riize": 419, "hearts2hearts": 1638, "gidle": -427, "anua": 492, "cosrx": 936, "manyo": 44, "reedleshot": 43, "beautyofjoseon": 225, "mixsoon": 348, "skin1004": 3134, "romand": 467, "clio": 145, "mediheal": 71, "torriden": 495, "missha": 286, "dalba": 439, "tirtir": 242, "medicube": 2469, "buldak": 342, "buldakcarbonara": 74}, "1월16일": {"bts": 53190, "jungkook": 4967, "katseye": 3853, "cortis": 16033, "enhypen": 27142, "seventeen": 2646, "txt": 306, "lesserafim": 449, "tws": 2009, "Twice": 992, "straykids": 1962, "NMIXX": 152, "alldayproject": 717, "blackpink": 18395, "treasure": 1114, "babymonster": 2556, "aespa": 770, "nct": -724, "riize": 822, "hearts2hearts": 1389, "gidle": -1103, "anua": 614, "cosrx": 923, "manyo": 65, "reedleshot": 39, "beautyofjoseon": 209, "mixsoon": 297, "skin1004": 2902, "romand": 279, "clio": 198, "mediheal": 72, "torriden": 450, "missha": 166, "dalba": 424, "tirtir": 381, "medicube": 2083, "buldak": 529, "buldakcarbonara": 94}, "1월17일": {"bts": 27771, "jungkook": 5198, "katseye": 6438, "cortis": 13024, "enhypen": 15067, "seventeen": 2059, "txt": 203, "lesserafim": 2553, "tws": 2050, "Twice": 774, "straykids": 6236, "NMIXX": 28, "alldayproject": 417, "blackpink": 8870, "treasure": 1178, "babymonster": 2332, "aespa": 129, "nct": -56, "riize": 212, "hearts2hearts": 2568, "gidle": -181, "anua": 548, "cosrx": 945, "manyo": 9, "reedleshot": 18, "beautyofjoseon": 209, "mixsoon": 207, "skin1004": 2667, "romand": 254, "clio": 278, "mediheal": 47, "torriden": 374, "missha": 205, "dalba": 401, "tirtir": 335, "medicube": 1638, "buldak": 371, "buldakcarbonara": 54}, "1월18일": {"bts": 27554, "jungkook": 5377, "katseye": 5655, "cortis": 20714, "enhypen": 19342, "seventeen": 1689, "txt": 781, "lesserafim": 1735, "tws": 2086, "Twice": -768, "straykids": 8766, "NMIXX": -177, "alldayproject": 159, "blackpink": 8528, "treasure": 592, "babymonster": 2862, "aespa": 850, "nct": -150, "riize": 3131, "hearts2hearts": 2116, "gidle": -765, "anua": 454, "cosrx": 879, "manyo": 32, "reedleshot": 40, "beautyofjoseon": 167, "mixsoon": 246, "skin1004": 2045, "romand": 122, "clio": 156, "mediheal": 40, "torriden": 401, "missha": 217, "dalba": 425, "tirtir": 217, "medicube": 1443, "buldak": 449, "buldakcarbonara": 64}, "1월19일": {"bts": 23664, "jungkook": 1816, "katseye": 5887, "cortis": 9177, "enhypen": 13929, "seventeen": 1696, "txt": 2200, "lesserafim": 1034, "tws": 2066, "Twice": 7985, "straykids": 10782, "NMIXX": -146, "alldayproject": 905, "blackpink": 135, "treasure": 130, "babymonster": 1303, "aespa": 198, "nct": -826, "riize": 478, "hearts2hearts": 1107, "gidle": -602, "anua": 556, "cosrx": 886, "manyo": 29, "reedleshot": 5, "beautyofjoseon": 202, "mixsoon": 250, "skin1004": 2086, "romand": 403, "clio": 144, "mediheal": 47, "torriden": 406, "missha": 244, "dalba": 410, "tirtir": 289, "medicube": 2026, "buldak": 277, "buldakcarbonara": 78}, "1월20일": {"bts": 17830, "jungkook": 3288, "katseye": 3622, "cortis": 11763, "enhypen": 9018, "seventeen": 174, "txt": 269, "lesserafim": 698, "tws": 1918, "Twice": 1212, "straykids": 3577, "NMIXX": -77, "alldayproject": 419, "blackpink": 2140, "treasure": -207, "babymonster": 1671, "aespa": -856, "nct": -303, "riize": 1026, "hearts2hearts": 930, "gidle": -912, "anua": 677, "cosrx": 894, "manyo": 47, "reedleshot": -5, "beautyofjoseon": 253, "mixsoon": 317, "skin1004": 2432, "romand": 441, "clio": 323, "mediheal": 31, "torriden": 418, "missha": 206, "dalba": 311, "tirtir": 317, "medicube": 1868, "buldak": 461, "buldakcarbonara": 72}, "1월21일": {"bts": 20283, "jungkook": 4528, "katseye": 3768, "cortis": 15112, "enhypen": 10257, "seventeen": 416, "txt": 246, "lesserafim": 70, "tws": 2120, "Twice": 748, "straykids": 10705, "NMIXX": -110, "alldayproject": 156, "blackpink": 4047, "treasure": -376, "babymonster": 1526, "aespa": -131, "nct": -923, "riize": 518, "hearts2hearts": 1148, "gidle": -274, "anua": 614, "cosrx": 969, "manyo": 16, "reedleshot": 65, "beautyofjoseon": 197, "mixsoon": 306, "skin1004": 2101, "romand": 350, "clio": 224, "mediheal": 64, "torriden": 496, "missha": 165, "dalba": 453, "tirtir": 279, "medicube": 1649, "buldak": 536, "buldakcarbonara": 75}, "1월22일": {"bts": 41769, "jungkook": 1397, "katseye": 2939, "cortis": 10369, "enhypen": 8441, "seventeen": 1224, "txt": -118, "lesserafim": 658, "tws": 2530, "Twice": 1321, "straykids": 7270, "NMIXX": 350, "alldayproject": 298, "blackpink": 4075, "treasure": -99, "babymonster": 2166, "aespa": 6, "nct": -651, "riize": 144, "hearts2hearts": 672, "gidle": -863, "anua": 369, "cosrx": 769, "manyo": 26, "reedleshot": 19, "beautyofjoseon": 193, "mixsoon": 266, "skin1004": 2661, "romand": 150, "clio": 364, "mediheal": 49, "torriden": 446, "missha": 214, "dalba": 354, "tirtir": 247, "medicube": 2182, "buldak": 443, "buldakcarbonara": 88}, "1월23일": {"bts": 25068, "jungkook": 4338, "katseye": 3703, "cortis": 8378, "enhypen": 7001, "seventeen": 2760, "txt": -967, "lesserafim": 591, "tws": 2148, "Twice": 1257, "straykids": 7660, "NMIXX": -11, "alldayproject": 722, "blackpink": 2215, "treasure": -181, "babymonster": 804, "aespa": -305, "nct": -767, "riize": 652, "hearts2hearts": 1551, "gidle": -424, "anua": 533, "cosrx": 787, "manyo": 10, "reedleshot": 52, "beautyofjoseon": 256, "mixsoon": 282, "skin1004": 2850, "romand": 424, "clio": 116, "mediheal": 75, "torriden": 263, "missha": 65, "dalba": 345, "tirtir": 220, "medicube": 1662, "buldak": 236, "buldakcarbonara": 54}, "1월24일": {"bts": 27534, "jungkook": 2159, "katseye": 5098, "cortis": 8400, "enhypen": 12722, "seventeen": 2842, "txt": 261, "lesserafim": 2162, "tws": 1565, "Twice": 3594, "straykids": 3120, "NMIXX": -67, "alldayproject": 388, "blackpink": 5894, "treasure": 343, "babymonster": 2732, "aespa": 287, "nct": -321, "riize": 1241, "hearts2hearts": 1249, "gidle": -808, "anua": 600, "cosrx": 790, "manyo": 49, "reedleshot": 15, "beautyofjoseon": 270, "mixsoon": 207, "skin1004": 2578, "romand": 466, "clio": 142, "mediheal": 81, "torriden": 567, "missha": 325, "dalba": 217, "tirtir": 267, "medicube": 2072, "buldak": 721, "buldakcarbonara": 102}, "1월25일": {"bts": 10645, "jungkook": -142, "katseye": 2746, "cortis": 11745, "enhypen": 6280, "seventeen": 378, "txt": -501, "lesserafim": 458, "tws": 862, "Twice": 1189, "straykids": 4911, "NMIXX": -105, "alldayproject": 139, "blackpink": 322, "treasure": -33, "babymonster": 1481, "aespa": 11, "nct": -368, "riize": 405, "hearts2hearts": 964, "gidle": -45, "anua": 227, "cosrx": 353, "manyo": 4, "reedleshot": 27, "beautyofjoseon": 135, "mixsoon": 118, "skin1004": 1243, "romand": 117, "clio": 208, "mediheal": 15, "torriden": 200, "missha": 115, "dalba": 290, "tirtir": 191, "medicube": 1168, "buldak": 254, "buldakcarbonara": 72}, "1월26일": {"bts": 11122, "jungkook": 249, "katseye": 2134, "cortis": 8763, "enhypen": 3938, "seventeen": 1563, "txt": -30, "lesserafim": 1295, "tws": 429, "illit": 1304, "Twice": 591, "straykids": 3328, "NMIXX": 5, "alldayproject": 16, "blackpink": -2068, "treasure": -230, "babymonster": 1828, "aespa": -74, "nct": -159, "riize": 359, "hearts2hearts": 613, "gidle": -288, "anua": 161, "cosrx": 1281, "manyo": 3, "reedleshot": 8, "beautyofjoseon": 101, "mixsoon": 55, "skin1004": 1101, "romand": 16, "clio": 173, "mediheal": 0, "torriden": 105, "missha": 22, "dalba": 162, "tirtir": 41, "medicube": 669, "buldak": 108, "buldakcarbonara": 48}, "1월27일": {"bts": 27976, "jungkook": 8147, "katseye": 8881, "cortis": 8593, "enhypen": 11239, "seventeen": 503, "txt": -157, "lesserafim": 1711, "tws": 2983, "illit": 1303, "Twice": 3158, "straykids": 7744, "NMIXX": 303, "alldayproject": 423, "blackpink": 11217, "treasure": -213, "babymonster": 2768, "aespa": 679, "nct": 236, "riize": 431, "hearts2hearts": 806, "gidle": -390, "anua": 622, "cosrx": 1237, "manyo": 23, "reedleshot": 72, "beautyofjoseon": 206, "mixsoon": 564, "skin1004": 3759, "romand": 366, "clio": 176, "mediheal": 116, "torriden": 627, "missha": 41, "dalba": 590, "tirtir": 75, "medicube": 740, "buldak": 202, "buldakcarbonara": 57}, "1월28일": {"bts": 13509, "jungkook": 1773, "katseye": 6867, "cortis": 7724, "enhypen": 9887, "seventeen": 1046, "txt": -2685, "lesserafim": 402, "tws": 1843, "illit": 1303, "Twice": 4093, "straykids": 3867, "NMIXX": -297, "alldayproject": 439, "blackpink": 1563, "treasure": 1433, "babymonster": 3404, "aespa": 17, "nct": -653, "riize": 151, "hearts2hearts": 1513, "gidle": -922, "anua": 908, "cosrx": 848, "manyo": -6, "reedleshot": 45, "beautyofjoseon": 297, "mixsoon": 220, "skin1004": 3389, "romand": 536, "clio": 158, "mediheal": 74, "torriden": 601, "missha": 701, "dalba": 403, "tirtir": 278, "medicube": 2298, "buldak": 1594, "buldakcarbonara": 66}, "1월29일": {"bts": 20662, "jungkook": 4098, "katseye": 4347, "cortis": 25294, "enhypen": 3615, "seventeen": 1107, "txt": -526, "lesserafim": 122, "tws": 4160, "illit": 1304, "Twice": 712, "straykids": 4071, "NMIXX": -231, "alldayproject": 213, "blackpink": 4441, "treasure": 342, "babymonster": 2863, "aespa": -775, "nct": -819, "riize": 854, "hearts2hearts": 1787, "gidle": -134, "anua": 747, "cosrx": 1234, "manyo": 11, "reedleshot": 101, "beautyofjoseon": 261, "mixsoon": 326, "skin1004": 2897, "romand": 53, "clio": 171, "mediheal": 56, "torriden": 498, "missha": 359, "dalba": 615, "tirtir": 354, "medicube": 3092, "buldak": 764, "buldakcarbonara": 150}, "1월30일": {"bts": 17765, "jungkook": 13975, "katseye": 4542, "cortis": 9603, "enhypen": 9366, "seventeen": 463, "txt": -312, "lesserafim": 913, "tws": 2636, "illit": 1303, "Twice": 2862, "straykids": 6735, "NMIXX": -33, "alldayproject": 138, "blackpink": 4887, "treasure": 353, "babymonster": 2542, "aespa": 237, "nct": -409, "riize": 578, "hearts2hearts": 1538, "gidle": -642, "anua": 536, "cosrx": 740, "manyo": 20, "reedleshot": 58, "beautyofjoseon": 221, "mixsoon": 226, "skin1004": 2691, "romand": 361, "clio": 118, "mediheal": 86, "torriden": 447, "missha": 117, "dalba": 384, "tirtir": 307, "medicube": 2197, "buldak": 330, "buldakcarbonara": 85}, "1월31일": {"bts": 17259, "jungkook": 3499, "katseye": 6477, "cortis": 11207, "enhypen": 5964, "seventeen": 1024, "txt": -34, "lesserafim": 1057, "tws": 2079, "Twice": 2531, "straykids": 6723, "NMIXX": -137, "alldayproject": 393, "blackpink": 3850, "treasure": 385, "babymonster": 2052, "aespa": 1159, "nct": 346, "riize": -222, "hearts2hearts": 2903, "gidle": -531, "anua": 551, "cosrx": 787, "manyo": 15, "reedleshot": 51, "beautyofjoseon": 158, "mixsoon": 174, "skin1004": 2849, "romand": 206, "clio": 30, "mediheal": 51, "torriden": 447, "missha": 194, "dalba": 383, "tirtir": 298, "medicube": 2532, "buldak": 198, "buldakcarbonara": 77}, "2월1일": {"bts": 14316, "jungkook": 3046, "katseye": 5979, "cortis": 5200, "enhypen": 9220, "seventeen": 68, "txt": 348, "lesserafim": 2088, "tws": 2141, "Twice": 6478, "straykids": 7120, "NMIXX": 48, "alldayproject": 281, "blackpink": 1899, "treasure": 148, "babymonster": 3212, "aespa": 1414, "nct": 1505, "riize": 1337, "hearts2hearts": 2885, "gidle": -498, "anua": 516, "cosrx": 674, "manyo": 9, "reedleshot": 10, "beautyofjoseon": 196, "mixsoon": 208, "skin1004": 2979, "romand": 348, "clio": 257, "mediheal": 60, "torriden": 429, "missha": 98, "dalba": 356, "tirtir": 289, "medicube": 1821, "buldak": 564, "buldakcarbonara": 54}, "2월2일": {"bts": 28471, "jungkook": 9214, "katseye": 10272, "cortis": 19558, "enhypen": 8081, "seventeen": 1237, "txt": 202, "lesserafim": -379, "tws": 1918, "Twice": 2189, "straykids": 8824, "NMIXX": -84, "alldayproject": 222, "blackpink": 3388, "treasure": -201, "babymonster": 1842, "aespa": 784, "nct": 198, "riize": 1019, "hearts2hearts": 544, "gidle": -983, "anua": 629, "cosrx": 1014, "manyo": 21, "reedleshot": 34, "beautyofjoseon": 274, "mixsoon": 300, "skin1004": 2879, "romand": 186, "clio": 136, "mediheal": 104, "torriden": 450, "missha": 181, "dalba": 359, "tirtir": 314, "medicube": 2294, "buldak": 497, "buldakcarbonara": 106}, "2월3일": {"bts": 31450, "jungkook": 7362, "katseye": 4006, "cortis": 5810, "enhypen": 2931, "seventeen": 596, "txt": 254, "lesserafim": 796, "tws": 1820, "Twice": 1385, "straykids": 7197, "NMIXX": -208, "alldayproject": 172, "blackpink": -378, "treasure": 633, "babymonster": 1482, "aespa": -2308, "nct": -47, "riize": 369, "hearts2hearts": 1383, "gidle": -845, "anua": 615, "cosrx": 783, "manyo": 6, "reedleshot": 80, "beautyofjoseon": 262, "mixsoon": 266, "skin1004": 3222, "romand": 242, "clio": 56, "mediheal": 84, "torriden": 365, "missha": 245, "dalba": 405, "tirtir": 434, "medicube": 2226, "buldak": 330, "buldakcarbonara": 70}, "2월4일": {"bts": 11279, "jungkook": 3054, "katseye": 3888, "cortis": 10264, "enhypen": 5353, "seventeen": 374, "txt": 739, "lesserafim": 961, "tws": 1186, "Twice": 2112, "straykids": 5552, "NMIXX": -10, "alldayproject": 139, "blackpink": 2230, "treasure": -275, "babymonster": 2471, "aespa": -594, "nct": -1311, "riize": 237, "hearts2hearts": 2219, "gidle": -247, "anua": 585, "cosrx": 920, "manyo": 1, "reedleshot": 63, "beautyofjoseon": 218, "mixsoon": 287, "skin1004": 3092, "romand": 277, "clio": 252, "mediheal": 57, "torriden": 431, "missha": 137, "dalba": 462, "tirtir": 306, "medicube": 2668, "buldak": 234, "buldakcarbonara": 31}, "2월5일": {"bts": 19264, "jungkook": -92, "katseye": 4786, "cortis": 10820, "enhypen": 9530, "seventeen": 602, "txt": 950, "lesserafim": 360, "tws": 968, "Twice": 1076, "straykids": 10094, "NMIXX": 88, "alldayproject": 126, "blackpink": 3699, "treasure": 1153, "babymonster": 5619, "aespa": 405, "nct": -215, "riize": 376, "hearts2hearts": 542, "gidle": -778, "anua": 580, "cosrx": 798, "manyo": 17, "reedleshot": 60, "beautyofjoseon": 302, "mixsoon": 228, "skin1004": 2688, "romand": 178, "clio": 207, "mediheal": 44, "torriden": 417, "missha": 220, "dalba": 457, "tirtir": 409, "medicube": 3881, "buldak": 452, "buldakcarbonara": 82}, "2월6일": {"bts": 11176, "jungkook": -634, "katseye": 4455, "cortis": 23212, "enhypen": 4671, "seventeen": 1037, "txt": 1424, "lesserafim": 843, "tws": 2525, "Twice": 1357, "straykids": 15439, "NMIXX": 78, "alldayproject": 242, "blackpink": 3214, "treasure": -166, "babymonster": 3995, "aespa": 425, "nct": -724, "riize": 794, "hearts2hearts": 2169, "gidle": -930, "anua": 554, "cosrx": 759, "manyo": 8, "reedleshot": 63, "beautyofjoseon": 254, "mixsoon": 208, "skin1004": 2711, "romand": 119, "clio": 236, "mediheal": 70, "torriden": 364, "missha": 159, "dalba": 361, "tirtir": 289, "medicube": 3116, "buldak": 213, "buldakcarbonara": 48}, "2월7일": {"bts": 17051, "jungkook": 1278, "katseye": 5826, "cortis": 12753, "enhypen": 6342, "seventeen": 1078, "txt": 609, "lesserafim": 315, "tws": 1796, "Twice": 946, "straykids": 26649, "NMIXX": -2, "alldayproject": 67, "blackpink": 2466, "treasure": 243, "babymonster": 2682, "aespa": 1325, "nct": -9, "riize": 692, "hearts2hearts": 2032, "gidle": -910, "anua": 469, "cosrx": 706, "manyo": 11, "reedleshot": 41, "beautyofjoseon": 267, "mixsoon": 189, "skin1004": 2633, "romand": 220, "clio": 275, "mediheal": 43, "torriden": 446, "missha": 175, "dalba": 507, "tirtir": 284, "medicube": 1667, "buldak": 655, "buldakcarbonara": 87}, "2월8일": {"bts": 11335, "jungkook": 801, "katseye": 5702, "cortis": 13233, "enhypen": 10948, "seventeen": 1174, "txt": 304, "lesserafim": 935, "tws": 709, "Twice": 1188, "straykids": 42009, "NMIXX": -692, "alldayproject": 192, "blackpink": 5996, "treasure": 398, "babymonster": 2114, "aespa": 1864, "nct": 514, "riize": 593, "hearts2hearts": 711, "gidle": -521, "anua": 617, "cosrx": 703, "manyo": 9, "reedleshot": 29, "beautyofjoseon": 267, "mixsoon": 206, "skin1004": 2562, "romand": 177, "clio": 171, "mediheal": 69, "torriden": 435, "missha": 173, "dalba": 429, "tirtir": 304, "medicube": 3030, "buldak": 527, "buldakcarbonara": 84}}}, "generated": "2026-02-09 06:19", "spotify_4week": {"HYBE": [{"name": "BTS", "weeks": [139.4, 103.2, 16.7, 38.8], "vs1yr": 192.4}, {"name": "Jung Kook", "weeks": [44.9, 24.6, 2.3, -11.8], "vs1yr": -165.5}, {"name": "Seventeen", "weeks": [1.3, -1.0, -0.6, -8.0], "vs1yr": -69.7}, {"name": "Newjeans", "weeks": [14.0, -9.1, -2.3, -65.8], "vs1yr": -40.8}, {"name": "Le sserafim", "weeks": [32.3, -1.4, -0.4, -68.4], "vs1yr": 198.6}, {"name": "TXT", "weeks": [6.9, 7.4, 0.2, -0.5], "vs1yr": -77.1}, {"name": "Enhypen", "weeks": [33.1, 62.9, 7.2, 39.7], "vs1yr": 136.9}, {"name": "BoyNextDoor", "weeks": [-2.5, -6.0, -1.4, -12.8], "vs1yr": -57.9}, {"name": "TWS", "weeks": [17.3, 12.4, 0.8, 5.0], "vs1yr": 90.0}, {"name": "캣츠아이", "weeks": [118.1, 39.8, 7.4, -198.5], "vs1yr": 3542.4}], "JYP": [{"name": "StrayKids", "weeks": [-19.3, -23.9, -2.7, -25.3], "vs1yr": 9.4}, {"name": "Twice", "weeks": [-11.7, -49.7, -5.2, -79.7], "vs1yr": 698.1}, {"name": "NMIXX", "weeks": [3.2, -2.0, -0.4, -11.3], "vs1yr": 36.1}, {"name": "ITZY", "weeks": [4.8, 1.4, -0.7, -9.9], "vs1yr": -39.6}, {"name": "Kickflip", "weeks": [4.4, 6.7, 0.6, 5.4], "vs1yr": 19.7}], "SM": [{"name": "Riize", "weeks": [-2.1, -1.9, -0.8, -6.1], "vs1yr": -44.7}, {"name": "에스파", "weeks": [4.5, -3.3, 0.0, -22.2], "vs1yr": -171.1}, {"name": "NCTDREAM", "weeks": [-3.0, -4.7, -0.3, -4.9], "vs1yr": -44.4}, {"name": "NCT127", "weeks": [2.5, 1.1, -0.3, 1.0], "vs1yr": -64.4}, {"name": "Hearts2hearts", "weeks": [0.5, -4.3, -1.6, -16.7], "vs1yr": 380.3}], "YG": [{"name": "Blackpink", "weeks": [1.5, 2.0, -2.7, -102.1], "vs1yr": 2327.1}, {"name": "Treasure", "weeks": [1.5, 1.2, 0.0, -3.9], "vs1yr": -68.1}, {"name": "Babymonster", "weeks": [10.1, -0.3, -1.2, -21.0], "vs1yr": -144.5}, {"name": "Alldayproject", "weeks": [-12.3, -7.3, -1.4, -366.5], "vs1yr": 10.5}, {"name": "ROSE", "weeks": [21.4, -33.5, -4.3, -284.3], "vs1yr": 3156.3}, {"name": "제니", "weeks": [13.6, -39.9, -85.1, 71.5], "vs1yr": 4217.1}], "Global": [{"name": "TaylorSwift", "weeks": [-97.2, -476.0, -11.5, -227.0], "vs1yr": 1882.9}, {"name": "Adele", "weeks": [84.2, 53.0, 6.6, -0.6], "vs1yr": -86.9}, {"name": "Dua Lipa", "weeks": [68.5, 36.4, 4.6, -206.2], "vs1yr": -39.1}, {"name": "Sam Smith", "weeks": [-50.6, -200.5, 0.3, -23.1], "vs1yr": -663.7}, {"name": "Bruno Mars", "weeks": [967.7, 525.6, 52.5, 196.3], "vs1yr": -1507.9}, {"name": "ariana grande", "weeks": [-664.0, -2100.9, -61.5, -467.9], "vs1yr": 164.5}]}, "delta_weekly": {"weeks": ["W-11", "W-10", "W-9", "W-8", "W-7", "W-6", "W-5", "W-4", "W-3", "W-2", "W-1", "W0"], "week_labels": {"W-11": "11월17일~11월23일", "W-10": "11월24일~11월30일", "W-9": "12월1일~12월7일", "W-8": "12월8일~12월14일", "W-7": "12월15일~12월21일", "W-6": "12월22일~12월28일", "W-5": "12월29일~1월4일", "W-4": "1월5일~1월11일", "W-3": "1월12일~1월18일", "W-2": "1월19일~1월25일", "W-1": "1월26일~2월1일", "W0": "2월2일~2월8일"}, "views": {"NMIXX": [69724893, 58831318, 54624415, 50058768, 46665276, 71217200, 72577416, 66715012, 54044675, 55944537, 46292158, 42756742], "Twice": [468776996, 468492162, 382735258, 394066770, 434800159, 478479569, 485806713, 514291655, 478384372, 569464493, 479680144, 404704667], "aespa": [409189700, 379449356, 519703247, 521974724, 422858825, 626131341, 675285773, 384067458, 308792667, 292415103, 310859618, 317591784], "alldayproject": [291173878, 153342976, 246022310, 184254422, 188017118, 190512110, 166822449, 130922395, 97772964, 69666993, 48788387, 37550083], "anua": [70536375, 91258473, 65523483, 59842833, 58843482, 57531140, 71458108, 50282462, 51727875, 40981890, 35096579, 34027452], "babymonster": [456277249, 815111685, 835314348, 481646532, 427478523, 671627918, 709432959, 544531801, 443871145, 362842601, 344545799, 464555103], "beautyofjoseon": [18473642, 33896695, 21968303, 18062217, 17151702, 19969434, 20855538, 15944328, 18978691, 20815522, 22772056, 18951111], "blackpink": [1652375605, 2215191175, 2066313229, 1898942337, 1941022816, 2261389864, 2009168584, 2002825661, 2152575552, 1704234829, 1785950858, 1700107171], "bts": [1785641749, 1719205697, 1969249951, 1925084900, 1947366627, 2022435418, 2366412133, 2375382659, 3601848488, 3266487689, 2558668058, 2238467976], "buldak": [216256996, 229703475, 233070826, 209606364, 215851978, 244863627, 260414513, 222985721, 232491722, 235094408, 199204029, 223142196], "buldakcarbonara": [35644979, 27205477, 28128388, 33240486, 26697693, 32696788, 34088589, 30623058, 28557362, 28904194, 27536670, 31446574], "clio": [30321751, 29298520, 26867877, 27597941, 25933228, 24437356, 23255643, 25168359, 31497481, 23704662, 30776861, 50757752], "cortis": [909758027, 1070840926, 1302594461, 1300633975, 1244466824, 1385306058, 1391635449, 1566792477, 1360476306, 1069058476, 880225879, 1121018045], "cosrx": [46826474, 50391740, 37947463, 33763042, 40458457, 40951839, 44232732, 36322034, 45071703, 26495293, 34357197, 25035082], "dalba": [22017300, 26198589, 14674908, 17350748, 17777914, 17663812, 14081560, 12576514, 14613961, 16998706, 15132302, 11839240], "enhypen": [875685865, 1027927200, 946486710, 910510061, 875563465, 1106196383, 1114803564, 1114215669, 1196936517, 1267839621, 981988105, 992233856], "gidle": [33900924, 39515606, 36703441, 46788479, 32812798, 38917330, 42034364, 39881205, 33587030, 35762715, 39058486, 35993446], "hearts2hearts": [192998638, 239506284, 396843200, 221405361, 304555598, 482948973, 392403647, 211084202, 216817155, 192130171, 221568596, 236440246], "illit": [172115949, 291808431, 306668223, 324587337, 344580174, 434244478, 417410194, 135659133, 0, 0, 152150752, 0], "jungkook": [952799398, 938674145, 1169455486, 1095670277, 990034610, 1034234194, 920161294, 933805276, 1071999667, 975939571, 298382940, 857122856], "katseye": [1592220372, 1362024515, 1351891378, 1126241345, 1156833936, 1284297854, 1592957903, 1328848445, 925870527, 854461786, 872865266, 1752096689], "lesserafim": [333379981, 296983028, 274226241, 314126337, 311576710, 426099911, 358554256, 470968536, 337344999, 269176415, 270991318, 219367037], "manyo": [6566997, 7076180, 3970726, 3715244, 4047829, 4318898, 3881814, 2071482, 3174580, 3629394, 3710861, 2352918], "medicube": [131277473, 241686075, 186833253, 151826574, 160228956, 156633869, 174858343, 189239306, 221571439, 181587254, 176573637, 180445592], "mediheal": [11740100, 10893575, 7413528, 4375379, 4878160, 6027192, 6680795, 5810220, 7515956, 5260357, 8967693, 6312615], "missha": [9888953, 9640938, 7979621, 6899281, 7352775, 10679062, 13294777, 9124693, 8889362, 7417994, 7834750, 9166046], "mixsoon": [42146850, 71009683, 104777853, 33145468, 30191694, 33645827, 35710609, 33601274, 41537881, 29506777, 30120232, 34892374], "nct": [178947751, 190305095, 191235878, 210152139, 189332226, 256239649, 248540373, 209350580, 198336498, 185144575, 195003186, 217616336], "reedleshot": [27645967, 23221721, 9066630, 15528816, 24777522, 23335341, 26944421, 7235823, 8490315, 7246859, 11401096, 7120979], "riize": [64985936, 98286808, 116281433, 93659210, 97144704, 126585598, 115397920, 142884395, 137446593, 98655161, 86363541, 109899474], "romand": [27081634, 32767474, 27349655, 27793548, 24519413, 29082014, 27137422, 22143345, 27435735, 28182963, 27971243, 28340471], "seventeen": [355327172, 360431144, 335796150, 331167346, 340718151, 391607280, 400905742, 363149334, 333370128, 331423489, 1029054943, 321475678], "skin1004": [218687884, 243515226, 239638630, 208142738, 119606756, 190700924, 171223982, 179478006, 178376420, 174389429, 217279839, 197067806], "straykids": [1263924324, 1432038913, 1224610239, 1205592865, 1114734262, 1336827479, 1308966241, 1306960319, 1199856486, 1108582454, 972818183, 1222425876], "tirtir": [110301963, 53319062, 26318330, 30240037, 26501832, 25420307, 37890278, 21289497, 21973765, 20178412, 23227814, 24037957], "torriden": [22044035, 20239483, 14650054, 15897433, 9907979, 10206099, 8717413, 9272039, 9621578, 10147714, 8852132, 13457153], "treasure": [189946924, 220685520, 254363235, 269789413, 208845591, 315546236, 329796989, 271569255, 305732003, 276968325, 269161615, 307310429], "tws": [92606072, 105453240, 130105849, 182172279, 140256113, 148708522, 207431042, 172101051, 168239497, 127326966, 121362583, 103365476], "txt": [196139156, 206599101, 205260099, 213086455, 224732463, 306050181, 377181710, 278373040, 222522354, 219845217, 218154308, 184993899]}}};
+
+const TABS = [
+  { id: 'food', label: '식품', emoji: '🔥', color: '#f59e0b' },
+  { id: 'cosmetics', label: '화장품', emoji: '💄', color: '#f472b6' },
+  { id: 'skinbooster', label: '스킨부스터', emoji: '💉', color: '#22d3ee' },
+  { id: 'idol', label: '엔터', emoji: '🎤', color: '#a78bfa' },
+  { id: 'spotify', label: 'Spotify', emoji: '🎵', color: '#1DB954' },
+];
+
+const WEEKLY_DATES = Object.keys(DATA.spotify).sort();
+let currentIdx = WEEKLY_DATES.length - 1;
+let currentTab = 'food';
+let charts = {};
+
+let searchMode = false;
+
+// Build search index: all unique item keys across all categories
+function buildSearchIndex() {
+  const idx = [];
+  const catLabels = { food: '🔥 식품', cosmetics: '💄 화장품', skinbooster: '💉 스킨부스터', idol: '🎤 엔터' };
+  const spotifyNames = {};
+  // Spotify name map (display name -> lowercase key for matching)
+  const latestSpotDate = WEEKLY_DATES[WEEKLY_DATES.length - 1];
+  if (DATA.spotify[latestSpotDate]) {
+    Object.keys(DATA.spotify[latestSpotDate]).forEach(n => { spotifyNames[n.toLowerCase()] = n; });
+  }
+
+  for (const cat of ['food', 'cosmetics', 'skinbooster', 'idol']) {
+    const catData = DATA.tiktok_videos[cat] || {};
+    const allKeys = new Set();
+    Object.values(catData).forEach(weekData => Object.keys(weekData).forEach(k => allKeys.add(k)));
+    allKeys.forEach(key => {
+      // check if also in delta views/videos
+      const hasViews = DATA.delta_weekly && DATA.delta_weekly.views && (key in DATA.delta_weekly.views || key.charAt(0).toUpperCase() + key.slice(1) in DATA.delta_weekly.views);
+      // find spotify match
+      let spotifyKey = null;
+      const kl = key.toLowerCase();
+      for (const [sk, sn] of Object.entries(spotifyNames)) {
+        if (sk === kl || sk.replace(/\s/g,'') === kl || sn.toLowerCase().replace(/\s/g,'') === kl) {
+          spotifyKey = sn;
+          break;
+        }
+      }
+      idx.push({ key, category: cat, catLabel: catLabels[cat], spotifyKey });
+    });
+  }
+  return idx;
+}
+
+const SEARCH_INDEX = buildSearchIndex();
+
+// Spotify display name mapping for items
+function findSpotifyName(key) {
+  const map = {
+    'bts': 'BTS', 'jungkook': 'Jung Kook', 'seventeen': 'Seventeen', 'enhypen': 'Enhypen',
+    'lesserafim': 'Le sserafim', 'txt': 'TXT', 'katseye': '캣츠아이', 'cortis': 'CORTIS',
+    'straykids': 'StrayKids', 'twice': 'Twice', 'nmixx': 'NMIXX', 'riize': 'Riize',
+    'aespa': '에스파', 'nctdream': 'NCTDREAM', 'nct127': 'NCT127', 'hearts2hearts': 'Hearts2hearts',
+    'blackpink': 'BlackPink', 'treasure': 'Treasure', 'babymonster': 'Babymonster',
+    'alldayproject': 'Alldayproject', 'gidle': '여자아이들',
+  };
+  const kl = key.toLowerCase();
+  if (map[kl]) return map[kl];
+  // Try exact match in latest spotify data
+  const latestDate = WEEKLY_DATES[WEEKLY_DATES.length - 1];
+  const sd = DATA.spotify[latestDate] || {};
+  for (const n of Object.keys(sd)) {
+    if (n.toLowerCase() === kl || n.toLowerCase().replace(/\s/g,'') === kl) return n;
+  }
+  return null;
+}
+
+// Search input handlers
+const searchInput = document.getElementById('searchInput');
+const searchSuggestions = document.getElementById('searchSuggestions');
+
+searchInput.addEventListener('input', function() {
+  const q = this.value.trim().toLowerCase();
+  if (!q) { searchSuggestions.classList.remove('show'); return; }
+  const matches = SEARCH_INDEX.filter(item =>
+    item.key.toLowerCase().includes(q)
+  ).slice(0, 12);
+  if (!matches.length) { searchSuggestions.classList.remove('show'); return; }
+  searchSuggestions.innerHTML = matches.map(m =>
+    `<div class="search-suggestion" onclick="showSearchResult('${m.key}','${m.category}')">
+      <span style="font-weight:700">${m.key}</span>
+      <span class="cat-badge">${m.catLabel}</span>
+    </div>`
+  ).join('');
+  searchSuggestions.classList.add('show');
+});
+
+searchInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    const q = this.value.trim().toLowerCase();
+    const match = SEARCH_INDEX.find(item => item.key.toLowerCase() === q);
+    if (match) showSearchResult(match.key, match.category);
+    else if (SEARCH_INDEX.filter(i => i.key.toLowerCase().includes(q)).length) {
+      const first = SEARCH_INDEX.find(i => i.key.toLowerCase().includes(q));
+      showSearchResult(first.key, first.category);
+    }
+  }
+  if (e.key === 'Escape') { exitSearch(); }
+});
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.search-wrap')) searchSuggestions.classList.remove('show');
+});
+
+function exitSearch() {
+  searchMode = false;
+  searchInput.value = '';
+  searchSuggestions.classList.remove('show');
+  document.getElementById('tabBar').style.display = '';
+  document.querySelector('.nav-bar').style.display = '';
+  renderContent();
+}
+
+function showSearchResult(key, category) {
+  searchMode = true;
+  searchInput.value = key;
+  searchSuggestions.classList.remove('show');
+  document.getElementById('tabBar').style.display = 'none';
+  document.querySelector('.nav-bar').style.display = 'none';
+
+  Object.values(charts).forEach(c => c.destroy());
+  charts = {};
+
+  const container = document.getElementById('content');
+  const catLabels = { food: '🔥 식품', cosmetics: '💄 화장품', skinbooster: '💉 스킨부스터', idol: '🎤 엔터' };
+  const spotifyName = findSpotifyName(key);
+
+  // Get latest data for summary card
+  const latestDate = WEEKLY_DATES[WEEKLY_DATES.length - 1];
+  const prevDate = WEEKLY_DATES.length > 1 ? WEEKLY_DATES[WEEKLY_DATES.length - 2] : null;
+  const catData = (DATA.tiktok_videos[category] || {})[latestDate] || {};
+  const item = catData[key];
+
+  // Get daily delta data for current week summary
+  const deltaV = DATA.delta?.videos || {};
+  const deltaViews = DATA.delta?.views || {};
+  const deltaDays = Object.keys(deltaV).sort();
+  const last7 = deltaDays.slice(-7);
+
+  // Find the matching delta key (case variants)
+  function findDeltaKey(obj, k) {
+    if (obj[k]) return k;
+    const kl = k.toLowerCase();
+    for (const dk of Object.keys(obj)) {
+      if (dk.toLowerCase() === kl) return dk;
+    }
+    // Try with first letter uppercase
+    const cap = k.charAt(0).toUpperCase() + k.slice(1);
+    if (obj[cap]) return cap;
+    return null;
+  }
+
+  const deltaVideoKey = findDeltaKey(last7.length ? deltaV[last7[0]] : {}, key);
+  const deltaViewKey = findDeltaKey(last7.length ? deltaViews[last7[0]] : {}, key);
+
+  let weekVideos = 0, weekViews = 0;
+  last7.forEach(day => {
+    if (deltaVideoKey && deltaV[day] && deltaV[day][deltaVideoKey]) weekVideos += deltaV[day][deltaVideoKey];
+    if (deltaViewKey && deltaViews[day] && deltaViews[day][deltaViewKey]) weekViews += deltaViews[day][deltaViewKey];
+  });
+
+  let html = `<button class="search-back" onclick="exitSearch()">← 목록으로 돌아가기</button>`;
+  html += `<div class="search-result-title">${key}</div>`;
+  html += `<div class="search-result-cat">${catLabels[category] || category}${spotifyName ? ' · Spotify: ' + spotifyName : ''}</div>`;
+
+  // Summary cards
+  html += `<div class="summary-cards">`;
+  if (item) {
+    html += `<div class="summary-card">
+      <div class="label">Videos (누적)</div>
+      <div class="value">${item.value >= 1000 ? (item.value/1000).toFixed(0) + 'K' : item.value.toFixed(1) + 'K'}</div>
+      <div class="sub" style="color:var(--text-dim)">${latestDate.replace('2026-','').replace('2025-','')}</div>
+    </div>`;
+    html += `<div class="summary-card">
+      <div class="label">WoW%</div>
+      <div class="value" style="color:${item.wow > 0 ? 'var(--green)' : item.wow < 0 ? 'var(--red)' : 'var(--text-dim)'}">
+        ${item.wow !== null ? (item.wow > 0 ? '+' : '') + (item.wow * 100).toFixed(2) + '%' : '-'}
+      </div>
+    </div>`;
+  }
+  html += `<div class="summary-card">
+    <div class="label">금주 Videos 순증</div>
+    <div class="value" style="color:${weekVideos >= 0 ? 'var(--green)' : 'var(--red)'}">
+      ${weekVideos >= 0 ? '+' : ''}${weekVideos >= 1000 ? (weekVideos/1000).toFixed(1) + 'K' : weekVideos.toLocaleString()}
+    </div>
+    <div class="sub" style="color:var(--text-dim)">7일 합계</div>
+  </div>`;
+  html += `<div class="summary-card">
+    <div class="label">금주 Views</div>
+    <div class="value">${weekViews >= 1e8 ? (weekViews/1e8).toFixed(1) + '억' : weekViews >= 1e6 ? (weekViews/1e6).toFixed(0) + 'M' : weekViews >= 1e3 ? (weekViews/1e3).toFixed(0) + 'K' : weekViews.toLocaleString()}</div>
+    <div class="sub" style="color:var(--text-dim)">7일 합계</div>
+  </div>`;
+  if (spotifyName) {
+    const sd = DATA.spotify[latestDate] || {};
+    const sp = sd[spotifyName];
+    if (sp) {
+      html += `<div class="summary-card">
+        <div class="label">Spotify 월간 리스너</div>
+        <div class="value">${sp.value >= 1000 ? (sp.value / 1000).toFixed(1) + 'K' : sp.value.toFixed(1)}만</div>
+        <div class="sub" style="color:${sp.wow > 0 ? 'var(--green)' : sp.wow < 0 ? 'var(--red)' : 'var(--text-dim)'}">
+          ${sp.wow !== null ? (sp.wow > 0 ? '▲' : '▼') + Math.abs(sp.wow * 100).toFixed(1) + '%' : '-'}
+        </div>
+      </div>`;
+    }
+  }
+  html += `</div>`;
+
+  // Chart 1: Videos 12주 추이
+  html += `<div class="search-section">
+    <div class="search-section-title">📊 Videos 12주 추이 (누적, K)</div>
+    <div class="search-chart-wrap"><canvas id="searchVideos12"></canvas></div>
+  </div>`;
+
+  // Chart 2: Views 주간 순증 12주
+  const viewWeekCount = DATA.delta_weekly ? DATA.delta_weekly.weeks.length : 0;
+  html += `<div class="search-section">
+    <div class="search-section-title">👁️ Views 주간 순증 (최근 ${viewWeekCount}주, 억)</div>
+    <div class="search-chart-wrap"><canvas id="searchViews12"></canvas></div>
+  </div>`;
+
+  // Chart 3: Spotify (if applicable)
+  if (spotifyName) {
+    html += `<div class="search-section">
+      <div class="search-section-title">🎵 Spotify 월간 리스너 12주 (만)</div>
+      <div class="search-chart-wrap"><canvas id="searchSpotify12"></canvas></div>
+    </div>`;
+  }
+
+  container.innerHTML = html;
+
+  // Render Charts
+  setTimeout(() => {
+    renderSearchVideos12(key, category);
+    renderSearchViews12(key);
+    if (spotifyName) renderSearchSpotify12(spotifyName);
+  }, 50);
+}
+
+function renderSearchVideos12(key, category) {
+  const canvas = document.getElementById('searchVideos12');
+  if (!canvas) return;
+  const dates = WEEKLY_DATES.slice(-12);
+  const labels = dates.map(d => {
+    const dt = new Date(d);
+    return `${dt.getMonth()+1}/${dt.getDate()}`;
+  });
+  const values = dates.map(d => {
+    const cd = (DATA.tiktok_videos[category] || {})[d] || {};
+    return cd[key] ? cd[key].value : null;
+  });
+  const wows = dates.map(d => {
+    const cd = (DATA.tiktok_videos[category] || {})[d] || {};
+    return cd[key] ? cd[key].wow : null;
+  });
+
+  charts['searchVideos12'] = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Videos (K)',
+        data: values,
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59,130,246,0.1)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 4,
+        pointBackgroundColor: '#3b82f6',
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            afterLabel: function(ctx) {
+              const w = wows[ctx.dataIndex];
+              return w !== null && w !== undefined ? `WoW: ${(w > 0 ? '+' : '')}${(w*100).toFixed(2)}%` : '';
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1e2d4a' } },
+        y: { ticks: { color: '#64748b', callback: v => v >= 1000 ? (v/1000).toFixed(0) + 'K' : v }, grid: { color: '#1e2d4a' } }
+      }
+    }
+  });
+}
+
+function renderSearchViews12(key) {
+  const canvas = document.getElementById('searchViews12');
+  if (!canvas) return;
+  const dw = DATA.delta_weekly;
+  if (!dw || !dw.views) { canvas.parentElement.innerHTML = '<div class="empty-state"><div class="icon">📭</div>Views 데이터 없음</div>'; return; }
+
+  // Find matching key (case-insensitive)
+  let vKey = null;
+  const kl = key.toLowerCase();
+  for (const k of Object.keys(dw.views)) {
+    if (k.toLowerCase() === kl) { vKey = k; break; }
+  }
+  if (!vKey) {
+    const cap = key.charAt(0).toUpperCase() + key.slice(1);
+    if (dw.views[cap]) vKey = cap;
+  }
+  if (!vKey || !dw.views[vKey]) {
+    canvas.parentElement.innerHTML = '<div class="empty-state"><div class="icon">📭</div>Views 데이터 없음</div>';
+    return;
+  }
+
+  const weekLabels = dw.weeks.map(w => dw.week_labels[w] ? dw.week_labels[w].split('~')[1] : w);
+  const viewsData = dw.views[vKey].map(v => Math.round(v / 1e8 * 10) / 10);
+
+  charts['searchViews12'] = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: weekLabels,
+      datasets: [{
+        label: 'Views (억)',
+        data: viewsData,
+        borderColor: '#f59e0b',
+        backgroundColor: 'rgba(245,158,11,0.1)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 3,
+        pointBackgroundColor: '#f59e0b',
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.parsed.y.toFixed(1)}억 views`
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#64748b', font: { size: 9 }, maxRotation: 45 }, grid: { display: false } },
+        y: { ticks: { color: '#64748b', callback: v => v + '억' }, grid: { color: '#1e2d4a' } }
+      }
+    }
+  });
+}
+
+function renderSearchSpotify12(spotifyName) {
+  const canvas = document.getElementById('searchSpotify12');
+  if (!canvas) return;
+  const dates = WEEKLY_DATES.slice(-12);
+  const labels = dates.map(d => {
+    const dt = new Date(d);
+    return `${dt.getMonth()+1}/${dt.getDate()}`;
+  });
+  const values = dates.map(d => {
+    const sd = DATA.spotify[d] || {};
+    return sd[spotifyName] ? sd[spotifyName].value : null;
+  });
+  const wows = dates.map(d => {
+    const sd = DATA.spotify[d] || {};
+    return sd[spotifyName] ? sd[spotifyName].wow : null;
+  });
+
+  charts['searchSpotify12'] = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: '월간 리스너 (만)',
+        data: values,
+        borderColor: '#1DB954',
+        backgroundColor: 'rgba(29,185,84,0.1)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 4,
+        pointBackgroundColor: '#1DB954',
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.parsed.y.toFixed(1)}만`,
+            afterLabel: function(ctx) {
+              const w = wows[ctx.dataIndex];
+              return w !== null && w !== undefined ? `WoW: ${(w > 0 ? '+' : '')}${(w*100).toFixed(2)}%` : '';
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1e2d4a' } },
+        y: { ticks: { color: '#64748b', callback: v => v >= 1000 ? (v/1000).toFixed(1) + 'K' : v }, grid: { color: '#1e2d4a' } }
+      }
+    }
+  });
+}
+
+function init() {
+  renderTabs();
+  update();
+}
+
+function renderTabs() {
+  const bar = document.getElementById('tabBar');
+  bar.innerHTML = TABS.map(t => {
+    let count = 0;
+    if (t.id === 'spotify') count = Object.keys(DATA.spotify[WEEKLY_DATES[WEEKLY_DATES.length-1]] || {}).length;
+    else count = Object.keys((DATA.tiktok_videos[t.id] || {})[WEEKLY_DATES[WEEKLY_DATES.length-1]] || {}).length;
+    return `<button class="tab ${t.id === currentTab ? 'active' : ''}" onclick="switchTab('${t.id}')">
+      <span class="emoji">${t.emoji}</span>${t.label}<span class="count">${count}</span>
+    </button>`;
+  }).join('');
+}
+
+function switchTab(id) {
+  currentTab = id;
+  renderTabs();
+  renderContent();
+}
+
+function navigate(dir) {
+  currentIdx = Math.max(0, Math.min(WEEKLY_DATES.length - 1, currentIdx + dir));
+  update();
+}
+
+function goLatest() {
+  currentIdx = WEEKLY_DATES.length - 1;
+  update();
+}
+
+function jumpToDate(val) {
+  // 가장 가까운 주간 날짜 찾기
+  let best = 0;
+  let bestDiff = Infinity;
+  WEEKLY_DATES.forEach((d, i) => {
+    const diff = Math.abs(new Date(d) - new Date(val));
+    if (diff < bestDiff) { bestDiff = diff; best = i; }
+  });
+  currentIdx = best;
+  update();
+}
+
+function update() {
+  const date = WEEKLY_DATES[currentIdx];
+  const d = new Date(date);
+  const days = ['일', '월', '화', '수', '목', '금', '토'];
+  document.getElementById('dateDisplay').textContent =
+    `${d.getFullYear()}년 ${String(d.getMonth()+1).padStart(2,'0')}월 ${String(d.getDate()).padStart(2,'0')}일 ${days[d.getDay()]}요일`;
+  document.getElementById('dateInput').value = date;
+  renderContent();
+}
+
+function renderContent() {
+  if (searchMode) return;
+  const date = WEEKLY_DATES[currentIdx];
+  const prevDate = currentIdx > 0 ? WEEKLY_DATES[currentIdx - 1] : null;
+  const container = document.getElementById('content');
+  
+  // Destroy old charts
+  Object.values(charts).forEach(c => c.destroy());
+  charts = {};
+
+  if (currentTab === 'spotify') {
+    renderSpotify(container, date, prevDate);
+  } else {
+    renderTiktok(container, currentTab, date, prevDate);
+  }
+}
+
+function renderSpotify(container, date, prevDate) {
+  const current = DATA.spotify[date] || {};
+  const artists = Object.keys(current);
+  
+  if (!artists.length) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">📭</div>이 날짜에 데이터가 없습니다</div>';
+    return;
+  }
+
+  // 그룹핑
+  const groups = {
+    'HYBE': ['BTS','Jung Kook','Seventeen','Newjeans','Le sserafim','TXT','Enhypen','BoyNextDoor','TWS','illit','캣츠아이','CORTIS'],
+    'JYP': ['StrayKids','Twice','NMIXX','ITZY'],
+    'SM': ['Kickflip','Riize','에스파','NCTDREAM','NCT127','Hearts2hearts'],
+    'YG+': ['BlackPink','Treasure','Babymonster','Alldayproject','여자아이들','ROSE','제니'],
+    'Global': ['TaylorSwift','the Weeknd','Adele','Dua Lipa','Sam Smith','Bruno Mars','ariana grande','Sabrina Caprter']
+  };
+
+  // 순증 계산 (이번주 - 전주)
+  const prev = prevDate ? (DATA.spotify[prevDate] || {}) : {};
+  const globalSet = new Set(groups['Global'] || []);
+  const withDelta = artists.filter(a => current[a] && prev[a] && !globalSet.has(a))
+    .map(a => ({ name: a, value: current[a].value, wow: current[a].wow, delta: current[a].value - prev[a].value }))
+    .sort((a,b) => b.delta - a.delta);
+
+  // 차트
+  let html = '<div class="chart-grid">';
+  
+  // 순증 TOP 10
+  html += `<div class="chart-card"><div class="chart-title">주간 순증 TOP 10 (만)</div><div class="chart-wrap"><canvas id="spDelta"></canvas></div></div>`;
+  
+  // WOW% 차트
+  html += `<div class="chart-card"><div class="chart-title">주간 증감률 TOP 10</div><div class="chart-wrap"><canvas id="spWow"></canvas></div></div>`;
+
+  // 추이 차트 (HYBE)
+  const fourWeekGroups = ['HYBE', 'JYP', 'SM', 'YG'];
+  const groupEmojis = { HYBE: '🏢', JYP: '🎭', SM: '🌟', YG: '🐻' };
+  fourWeekGroups.forEach(g => {
+    html += `<div class="chart-card"><div class="chart-title">${groupEmojis[g] || ''} ${g} 4주간 월간 청취자 수 증감 (만)</div><div class="chart-wrap" style="height:260px"><canvas id="sp4w_${g}"></canvas></div></div>`;
+  });
+  
+  html += '</div>';
+
+  // 테이블: 그룹별
+  for (const [group, members] of Object.entries(groups)) {
+    const rows = members.filter(m => current[m]).map(m => {
+      const v = current[m];
+      const pv = prev[m];
+      return { name: m, value: v.value, wow: v.wow, delta: pv ? v.value - pv.value : null };
+    }).sort((a,b) => b.value - a.value);
+    
+    if (!rows.length) continue;
+
+    html += `<div class="table-card"><div class="table-header"><h3>${group}</h3><span class="badge badge-weekly">주간</span></div><div class="table-scroll"><table class="data-table"><thead><tr><th>아티스트</th><th>리스너 (만)</th><th>순증 (만)</th><th>WOW%</th></tr></thead><tbody>`;
+    rows.forEach(r => {
+      const wowClass = r.wow > 0 ? 'wow-pos' : r.wow < 0 ? 'wow-neg' : 'wow-zero';
+      const wowStr = r.wow != null ? `<span class="${wowClass}">${r.wow > 0 ? '+' : ''}${(r.wow*100).toFixed(1)}%</span>` : '-';
+      const deltaClass = r.delta > 0 ? 'wow-pos' : r.delta < 0 ? 'wow-neg' : 'wow-zero';
+      const deltaStr = r.delta != null ? `<span class="${deltaClass}">${r.delta > 0 ? '+' : ''}${r.delta.toFixed(1)}</span>` : '-';
+      html += `<tr><td>${r.name}</td><td>${r.value.toLocaleString()}</td><td>${deltaStr}</td><td>${wowStr}</td></tr>`;
+    });
+    html += '</tbody></table></div></div>';
+  }
+
+  container.innerHTML = html;
+
+  // 순증 TOP 10 차트
+  const deltaTop = withDelta.slice(0, 10);
+  if (deltaTop.length) {
+    charts.spDelta = new Chart(document.getElementById('spDelta'), {
+      type: 'bar',
+      data: {
+        labels: deltaTop.map(s => s.name),
+        datasets: [{
+          data: deltaTop.map(s => s.delta),
+          backgroundColor: deltaTop.map(s => s.delta >= 0 ? 'rgba(29,185,84,0.6)' : 'rgba(239,68,68,0.6)'),
+          borderColor: deltaTop.map(s => s.delta >= 0 ? '#1DB954' : '#ef4444'),
+          borderWidth: 1,
+          borderRadius: 4,
+        }]
+      },
+      options: chartOpts('만', true)
+    });
+  }
+
+  // WOW% 차트
+  const wowSorted = artists.filter(a => current[a].wow != null && !globalSet.has(a))
+    .map(a => ({name: a, wow: current[a].wow}))
+    .sort((a,b) => Math.abs(b.wow) - Math.abs(a.wow)).slice(0, 10);
+  charts.spWow = new Chart(document.getElementById('spWow'), {
+    type: 'bar',
+    data: {
+      labels: wowSorted.map(s => s.name),
+      datasets: [{
+        data: wowSorted.map(s => s.wow * 100),
+        backgroundColor: wowSorted.map(s => s.wow >= 0 ? 'rgba(16,185,129,0.6)' : 'rgba(239,68,68,0.6)'),
+        borderColor: wowSorted.map(s => s.wow >= 0 ? '#10b981' : '#ef4444'),
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: chartOpts('%', true)
+  });
+
+  // 그룹별 4주 증감 차트
+  const weekLabels = ['W-3', 'W-2', 'W-1', 'W0'];
+  const barColors = ['#3b82f6','#f59e0b','#a78bfa','#10b981','#f472b6','#22d3ee','#ef4444','#06b6d4','#84cc16','#e879f9','#fb923c','#14b8a6'];
+  
+  fourWeekGroups.forEach(g => {
+    const gData = DATA.spotify_4week?.[g] || [];
+    if (!gData.length) return;
+    const el = document.getElementById(`sp4w_${g}`);
+    if (!el) return;
+    
+    charts[`sp4w_${g}`] = new Chart(el, {
+      type: 'bar',
+      data: {
+        labels: gData.map(a => a.name),
+        datasets: weekLabels.map((w, wi) => ({
+          label: w,
+          data: gData.map(a => a.weeks[wi]),
+          backgroundColor: hexToRgba(barColors[wi], 0.7),
+          borderColor: barColors[wi],
+          borderWidth: 1,
+          borderRadius: 3,
+        }))
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true, position: 'top', labels: { color: '#94a3b8', font: { size: 10 }, boxWidth: 12 } },
+          tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y > 0 ? '+' : ''}${ctx.parsed.y.toFixed(1)}만` } }
+        },
+        scales: {
+          x: { ticks: { color: '#94a3b8', font: { size: 9 }, maxRotation: 45 }, grid: { color: 'rgba(30,45,74,0.3)' } },
+          y: { ticks: { color: '#94a3b8', font: { size: 10 }, callback: v => v > 0 ? `+${v}` : v }, grid: { color: 'rgba(30,45,74,0.3)' } }
+        }
+      }
+    });
+  });
+}
+
+function renderTiktok(container, category, date, prevDate) {
+  const catData = DATA.tiktok_videos[category] || {};
+  const current = catData[date] || {};
+  const prev = prevDate ? (catData[prevDate] || {}) : {};
+  const tags = Object.keys(current);
+
+  if (!tags.length) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">📭</div>이 날짜에 데이터가 없습니다</div>';
+    return;
+  }
+
+  const sorted = tags.map(t => ({name: t, ...current[t], delta: prev[t] ? current[t].value - prev[t].value : null})).sort((a,b) => b.value - a.value);
+  const tabInfo = TABS.find(t => t.id === category);
+  const color = tabInfo?.color || '#3b82f6';
+
+  // 엔터 카테고리 그룹 정의
+  const idolGroups = category === 'idol' ? {
+    'HYBE': ['bts','jungkook','seventeen','newjeans','lesserafim','txt','enhypen','boynextdoor','tws','illit','katseye','cortis','santosbravos'],
+    'JYP': ['straykids','twice','nmixx','itzy','niziu','kickflip'],
+    'SM': ['riize','aespa','nctdream','nct127','hearts2hearts'],
+    'YG+': ['blackpink','treasure','babymonster','alldayproject','gidle'],
+    'Global': ['TaylorSwift','theweeknd','adele','dualipa','samsmith','brunomars','arianagrande']
+  } : null;
+  const idolGlobalSet = idolGroups ? new Set(idolGroups['Global'] || []) : new Set();
+  const deltaSorted = sorted.filter(s => s.delta != null && (category !== 'idol' || !idolGlobalSet.has(s.name))).sort((a,b) => b.delta - a.delta);
+
+  let html = '<div class="chart-grid">';
+  
+  // 순증 TOP 10
+  html += `<div class="chart-card"><div class="chart-title">${tabInfo.emoji} ${tabInfo.label} 주간 순증 TOP 10 (K)</div><div class="chart-wrap"><canvas id="ttDelta"></canvas></div></div>`;
+  
+  // WOW%
+  html += `<div class="chart-card"><div class="chart-title">${tabInfo.emoji} 주간 증감률 TOP 10</div><div class="chart-wrap"><canvas id="ttWow"></canvas></div></div>`;
+
+  // 추이 (TOP 5)
+  html += `<div class="chart-card" style="grid-column:1/-1"><div class="chart-title">${tabInfo.emoji} ${tabInfo.label} TOP 5 - 12주 추이 (K)</div><div class="chart-wrap" style="height:280px"><canvas id="ttTrend"></canvas></div></div>`;
+
+  html += '</div>';
+
+  // Views 주간 순증 차트 (delta_weekly 데이터 활용)
+  const viewsCategoryMap = {
+    'food': { '🔥 식품 - Views 주간 순증': ['buldak','buldakcarbonara'] },
+    'cosmetics': 'dynamic_top10',
+    'idol': null
+  };
+  const dw = DATA.delta_weekly;
+  if (dw && dw.views) {
+    let viewsGroups = null;
+    if (viewsCategoryMap[category] === 'dynamic_top10') {
+      // 화장품: videos 순증 TOP 10 해시태그만 views에 표시
+      const top10Names = deltaSorted.slice(0, 10).map(s => s.name);
+      const availTop10 = top10Names.filter(n => dw.views[n]);
+      if (availTop10.length) viewsGroups = { [`💄 화장품 - Views 주간 순증`]: availTop10 };
+    } else if (viewsCategoryMap[category] && viewsCategoryMap[category] !== null) {
+      viewsGroups = viewsCategoryMap[category];
+    }
+    if (viewsGroups) {
+      const wLabels = dw.weeks.map(w => dw.week_labels[w] ? dw.week_labels[w].split('~')[1] : w);
+      html += '<div class="chart-grid">';
+      let vwIdx = 0;
+      for (const [label, members] of Object.entries(viewsGroups)) {
+        const available = members.filter(m => dw.views[m]);
+        if (!available.length) continue;
+        html += `<div class="chart-card" style="grid-column:1/-1"><div class="chart-title">📺 ${label} (억)</div><div class="chart-wrap" style="height:280px"><canvas id="ttCatViews${vwIdx}"></canvas></div></div>`;
+        vwIdx++;
+      }
+      html += '</div>';
+    }
+  }
+
+  // 엔터사별 그룹 테이블 or 전체 테이블
+  if (idolGroups) {
+    // Views 주간 순증 차트 (엔터사별)
+    const dw = DATA.delta_weekly;
+    if (dw && dw.views) {
+      const viewsGroupMap = {
+        'HYBE': ['bts','jungkook','seventeen','lesserafim','txt','enhypen','tws','katseye','cortis','NMIXX','Twice','hearts2hearts'],
+        'JYP': ['straykids','Twice','NMIXX'],
+        'SM': ['riize','aespa','nct','hearts2hearts'],
+        'YG+': ['blackpink','treasure','babymonster','alldayproject','gidle']
+      };
+      // 실제 그룹별 매핑 (delta_weekly 키와 idol 그룹 교차)
+      const viewsIdolGroups = {
+        'HYBE': ['bts','katseye','cortis','enhypen','seventeen','lesserafim'],
+        'JYP': ['straykids','Twice','NMIXX'],
+        'SM': ['aespa','nct','riize','hearts2hearts'],
+        'YG+': ['blackpink','treasure','babymonster','alldayproject','gidle']
+      };
+      const wLabels = dw.weeks.map(w => dw.week_labels[w] ? dw.week_labels[w].split('~')[1] : w);
+      const groupColors = { 'HYBE': '#3b82f6', 'JYP': '#f59e0b', 'SM': '#a78bfa', 'YG+': '#10b981' };
+      
+      html += '<div class="chart-grid">';
+      let vIdx = 0;
+      for (const [grp, members] of Object.entries(viewsIdolGroups)) {
+        const available = members.filter(m => dw.views[m]);
+        if (!available.length) continue;
+        html += `<div class="chart-card"><div class="chart-title">📺 ${grp} - 주간 Views 순증 (억)</div><div class="chart-wrap"><canvas id="ttViews${vIdx}"></canvas></div></div>`;
+        vIdx++;
+      }
+      html += '</div>';
+    }
+
+    const groupEmojis = { HYBE: '🏢', JYP: '🎭', SM: '🌟', 'YG+': '🐻', Global: '🌍' };
+    for (const [group, members] of Object.entries(idolGroups)) {
+      const rows = members.filter(m => current[m]).map(m => {
+        const v = current[m];
+        const pv = prev[m];
+        return { name: m, value: v.value, wow: v.wow, delta: pv ? v.value - pv.value : null };
+      }).sort((a,b) => b.value - a.value);
+      if (!rows.length) continue;
+      html += `<div class="table-card"><div class="table-header"><h3>${groupEmojis[group] || ''} ${group}</h3><span class="badge badge-weekly">주간</span></div><div class="table-scroll"><table class="data-table"><thead><tr><th>해시태그</th><th>Videos (K)</th><th>순증 (K)</th><th>WOW%</th></tr></thead><tbody>`;
+      rows.forEach(r => {
+        const wowClass = r.wow > 0 ? 'wow-pos' : r.wow < 0 ? 'wow-neg' : 'wow-zero';
+        const wowStr = r.wow != null ? `<span class="${wowClass}">${r.wow > 0 ? '+' : ''}${(r.wow*100).toFixed(1)}%</span>` : '-';
+        const deltaClass = r.delta > 0 ? 'wow-pos' : r.delta < 0 ? 'wow-neg' : 'wow-zero';
+        const deltaStr = r.delta != null ? `<span class="${deltaClass}">${r.delta > 0 ? '+' : ''}${r.delta.toFixed(2)}</span>` : '-';
+        html += `<tr><td>${r.name}</td><td>${r.value.toLocaleString()}</td><td>${deltaStr}</td><td>${wowStr}</td></tr>`;
+      });
+      html += '</tbody></table></div></div>';
+    }
+  } else {
+    html += `<div class="table-card"><div class="table-header"><h3>${tabInfo.emoji} ${tabInfo.label} 전체</h3><span class="badge badge-weekly">주간</span></div><div class="table-scroll"><table class="data-table"><thead><tr><th>#</th><th>해시태그</th><th>Videos (K)</th><th>순증 (K)</th><th>WOW%</th></tr></thead><tbody>`;
+    sorted.forEach((r, i) => {
+      const wowClass = r.wow > 0 ? 'wow-pos' : r.wow < 0 ? 'wow-neg' : 'wow-zero';
+      const wowStr = r.wow != null ? `<span class="${wowClass}">${r.wow > 0 ? '+' : ''}${(r.wow*100).toFixed(1)}%</span>` : '-';
+      const deltaClass = r.delta > 0 ? 'wow-pos' : r.delta < 0 ? 'wow-neg' : 'wow-zero';
+      const deltaStr = r.delta != null ? `<span class="${deltaClass}">${r.delta > 0 ? '+' : ''}${r.delta.toFixed(2)}</span>` : '-';
+      html += `<tr><td style="color:var(--text-dim)">${i+1}</td><td>${r.name}</td><td>${r.value.toLocaleString()}</td><td>${deltaStr}</td><td>${wowStr}</td></tr>`;
+    });
+    html += '</tbody></table></div></div>';
+  }
+
+  container.innerHTML = html;
+
+  // 순증 TOP 10 차트
+  const deltaTop = deltaSorted.slice(0, 10);
+  if (deltaTop.length) {
+    charts.ttDelta = new Chart(document.getElementById('ttDelta'), {
+      type: 'bar',
+      data: {
+        labels: deltaTop.map(s => s.name),
+        datasets: [{
+          data: deltaTop.map(s => s.delta),
+          backgroundColor: deltaTop.map(s => s.delta >= 0 ? hexToRgba(color, 0.6) : 'rgba(239,68,68,0.6)'),
+          borderColor: deltaTop.map(s => s.delta >= 0 ? color : '#ef4444'),
+          borderWidth: 1,
+          borderRadius: 4,
+        }]
+      },
+      options: chartOpts('K', true)
+    });
+  }
+
+  // WOW
+  const wowSorted = sorted.filter(s => s.wow != null && (category !== 'idol' || !idolGlobalSet.has(s.name))).sort((a,b) => Math.abs(b.wow) - Math.abs(a.wow)).slice(0, 10);
+  charts.ttWow = new Chart(document.getElementById('ttWow'), {
+    type: 'bar',
+    data: {
+      labels: wowSorted.map(s => s.name),
+      datasets: [{
+        data: wowSorted.map(s => s.wow * 100),
+        backgroundColor: wowSorted.map(s => s.wow >= 0 ? 'rgba(16,185,129,0.6)' : 'rgba(239,68,68,0.6)'),
+        borderColor: wowSorted.map(s => s.wow >= 0 ? '#10b981' : '#ef4444'),
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: chartOpts('%', true)
+  });
+
+  // 추이
+  const top5 = sorted.slice(0, 5);
+  const trendColors = ['#3b82f6','#f59e0b','#a78bfa','#10b981','#f472b6'];
+  const dates = Object.keys(catData).sort();
+  charts.ttTrend = new Chart(document.getElementById('ttTrend'), {
+    type: 'line',
+    data: {
+      labels: dates.map(d => d.slice(5)),
+      datasets: top5.map((t, i) => ({
+        label: t.name,
+        data: dates.map(d => catData[d]?.[t.name]?.value || null),
+        borderColor: trendColors[i],
+        backgroundColor: 'transparent',
+        tension: 0.3,
+        pointRadius: 2,
+        borderWidth: 2,
+      }))
+    },
+    options: { ...chartOpts('', false), plugins: { legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 } } } } }
+  });
+
+  // Views 주간 순증 차트 (식품/화장품)
+  if (DATA.delta_weekly && DATA.delta_weekly.views) {
+    let viewsGroupsR = null;
+    if (viewsCategoryMap[category] === 'dynamic_top10') {
+      const top10Names = deltaSorted.slice(0, 10).map(s => s.name);
+      const availTop10 = top10Names.filter(n => DATA.delta_weekly.views[n]);
+      if (availTop10.length) viewsGroupsR = { 'top': availTop10 };
+    } else if (viewsCategoryMap[category] && viewsCategoryMap[category] !== null) {
+      viewsGroupsR = viewsCategoryMap[category];
+    }
+    if (viewsGroupsR) {
+      const dwC = DATA.delta_weekly;
+      const catBarColors = ['#3b82f6','#f59e0b','#a78bfa','#10b981','#f472b6','#ef4444','#06b6d4','#8b5cf6','#ec4899','#14b8a6'];
+      const wLabelsC = dwC.weeks.map(w => dwC.week_labels[w] ? dwC.week_labels[w].split('~')[1] : w);
+      let vwIdx = 0;
+      for (const [label, members] of Object.entries(viewsGroupsR)) {
+        const available = members.filter(m => dwC.views[m]);
+        if (!available.length) { vwIdx++; continue; }
+        const el = document.getElementById('ttCatViews' + vwIdx);
+        if (el) {
+          charts['ttCatViews' + vwIdx] = new Chart(el, {
+            type: 'line',
+            data: {
+              labels: wLabelsC,
+              datasets: available.map((m, mi) => ({
+                label: m,
+                data: dwC.views[m].map(v => Math.round(v / 100000000 * 10) / 10),
+                borderColor: catBarColors[mi % catBarColors.length],
+                backgroundColor: catBarColors[mi % catBarColors.length] + '15',
+                fill: false,
+                tension: 0.3,
+                pointRadius: 3,
+                pointBackgroundColor: catBarColors[mi % catBarColors.length],
+              }))
+            },
+            options: {
+              ...chartOpts('억', false),
+              plugins: { legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } } }
+            }
+          });
+        }
+        vwIdx++;
+      }
+    }
+  }
+
+  // Views 주간 순증 차트 (엔터 전용)
+  if (category === 'idol' && DATA.delta_weekly && DATA.delta_weekly.views) {
+    const dw = DATA.delta_weekly;
+    const viewsIdolGroups = {
+      'HYBE': ['bts','katseye','cortis','enhypen','seventeen','lesserafim'],
+      'JYP': ['straykids','Twice','NMIXX'],
+      'SM': ['aespa','nct','riize','hearts2hearts'],
+      'YG+': ['blackpink','treasure','babymonster','alldayproject','gidle']
+    };
+    const barColors = ['#3b82f6','#f59e0b','#a78bfa','#10b981','#f472b6','#ef4444','#06b6d4','#8b5cf6','#ec4899'];
+    const wLabels = dw.weeks.map(w => dw.week_labels[w] ? dw.week_labels[w].split('~')[1] : w);
+    let vIdx = 0;
+    for (const [grp, members] of Object.entries(viewsIdolGroups)) {
+      const available = members.filter(m => dw.views[m]);
+      if (!available.length) continue;
+      const el = document.getElementById('ttViews' + vIdx);
+      if (el) {
+        charts['ttViews' + vIdx] = new Chart(el, {
+          type: 'line',
+          data: {
+            labels: wLabels,
+            datasets: available.map((m, mi) => ({
+              label: m,
+              data: dw.views[m].map(v => Math.round(v / 100000000 * 10) / 10),
+              borderColor: barColors[mi % barColors.length],
+              backgroundColor: barColors[mi % barColors.length] + '15',
+              fill: false,
+              tension: 0.3,
+              pointRadius: 3,
+              pointBackgroundColor: barColors[mi % barColors.length],
+            }))
+          },
+          options: {
+            ...chartOpts('억', false),
+            plugins: { legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } } }
+          }
+        });
+      }
+      vIdx++;
+    }
+  }
+}
+
+function chartOpts(suffix, hideLegend) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    indexAxis: 'x',
+    plugins: {
+      legend: { display: !hideLegend },
+      tooltip: {
+        callbacks: {
+          label: ctx => `${ctx.parsed.y?.toLocaleString() || ctx.parsed.x?.toLocaleString()}${suffix}`
+        }
+      }
+    },
+    scales: {
+      x: { ticks: { color: '#64748b', font: { size: 10 }, maxRotation: 45 }, grid: { color: 'rgba(30,45,74,0.3)' } },
+      y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(30,45,74,0.3)' } }
+    }
+  };
+}
+
+function hexToRgba(hex, a) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+init();
+</script>
+</body>
+</html>
