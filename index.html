@@ -930,8 +930,8 @@ function renderSpotify(container, date, prevDate) {
   html += `<div class="chart-card"><div class="chart-title">주간 증감률 TOP 10</div><div class="chart-wrap"><canvas id="spWow"></canvas></div></div>`;
 
   // 추이 차트 (HYBE)
-  const fourWeekGroups = ['HYBE', 'JYP', 'SM', 'YG'];
-  const groupEmojis = { HYBE: '🏢', JYP: '🎭', SM: '🌟', YG: '🐻' };
+  const fourWeekGroups = ['HYBE', 'JYP', 'SM', 'YG+'];
+  const groupEmojis = { HYBE: '🏢', JYP: '🎭', SM: '🌟', 'YG+': '🐻' };
   fourWeekGroups.forEach(g => {
     html += `<div class="chart-card"><div class="chart-title">${groupEmojis[g] || ''} ${g} 4주간 월간 청취자 수 증감 (만)</div><div class="chart-wrap" style="height:260px"><canvas id="sp4w_${g}"></canvas></div></div>`;
   });
@@ -999,12 +999,23 @@ function renderSpotify(container, date, prevDate) {
     options: chartOpts('%', true)
   });
 
-  // 그룹별 4주 증감 차트
-  const weekLabels = ['W-3', 'W-2', 'W-1', 'W0'];
+  // 그룹별 4주 증감 차트 (선택 날짜 기준 동적 계산)
+  const spDateIdx = WEEKLY_DATES.indexOf(date);
+  const sp4wDates = spDateIdx >= 4 ? WEEKLY_DATES.slice(spDateIdx - 4, spDateIdx + 1) : WEEKLY_DATES.slice(0, Math.min(5, WEEKLY_DATES.length));
+  const weekLabels = sp4wDates.length >= 5 ? ['W-3', 'W-2', 'W-1', 'W0'] : sp4wDates.slice(1).map((_, i) => `W${i - sp4wDates.length + 2}`);
   const barColors = ['#3b82f6','#f59e0b','#a78bfa','#10b981','#f472b6','#22d3ee','#ef4444','#06b6d4','#84cc16','#e879f9','#fb923c','#14b8a6'];
   
   fourWeekGroups.forEach(g => {
-    const gData = DATA.spotify_4week?.[g] || [];
+    const members = groups[g] || [];
+    const gData = members.filter(m => DATA.spotify[date]?.[m]).map(m => {
+      const weeks = [];
+      for (let i = 1; i < sp4wDates.length; i++) {
+        const curr = DATA.spotify[sp4wDates[i]]?.[m]?.value || 0;
+        const prev = DATA.spotify[sp4wDates[i-1]]?.[m]?.value || 0;
+        weeks.push(Math.round((curr - prev) * 10) / 10);
+      }
+      return { name: m, weeks };
+    }).filter(a => a.weeks.some(w => w !== 0));
     if (!gData.length) return;
     const el = document.getElementById(`sp4w_${g}`);
     if (!el) return;
@@ -1244,7 +1255,10 @@ function renderTiktok(container, category, date, prevDate) {
     if (viewsGroupsR) {
       const dwC = DATA.delta_weekly;
       const catBarColors = ['#3b82f6','#f59e0b','#a78bfa','#10b981','#f472b6','#ef4444','#06b6d4','#8b5cf6','#ec4899','#14b8a6'];
-      const dwEndIdx = currentIdx < dwC.weeks.length ? currentIdx + 1 : dwC.weeks.length;
+      // date 기반으로 delta_weekly 인덱스 찾기
+      const tvDates = Object.keys(catData).sort();
+      const tvIdx = tvDates.indexOf(date);
+      const dwEndIdx = tvIdx >= 0 ? Math.min(tvIdx + 1, dwC.weeks.length) : dwC.weeks.length;
       const dwStartIdx = Math.max(0, dwEndIdx - 12);
       const slicedWeeks = dwC.weeks.slice(dwStartIdx, dwEndIdx);
       const wLabelsC = slicedWeeks.map(w => dwC.week_labels[w] ? dwC.week_labels[w].split('~')[1] : w);
@@ -1290,7 +1304,10 @@ function renderTiktok(container, category, date, prevDate) {
       'YG+': ['blackpink','treasure','babymonster','alldayproject','gidle']
     };
     const barColors = ['#3b82f6','#f59e0b','#a78bfa','#10b981','#f472b6','#ef4444','#06b6d4','#8b5cf6','#ec4899'];
-    const dwEndIdx2 = currentIdx < dw.weeks.length ? currentIdx + 1 : dw.weeks.length;
+    // date 기반으로 delta_weekly 인덱스 찾기
+    const tvDatesIdol = Object.keys(catData).sort();
+    const tvIdxIdol = tvDatesIdol.indexOf(date);
+    const dwEndIdx2 = tvIdxIdol >= 0 ? Math.min(tvIdxIdol + 1, dw.weeks.length) : dw.weeks.length;
     const dwStartIdx2 = Math.max(0, dwEndIdx2 - 12);
     const slicedWeeks2 = dw.weeks.slice(dwStartIdx2, dwEndIdx2);
     const wLabels = slicedWeeks2.map(w => dw.week_labels[w] ? dw.week_labels[w].split('~')[1] : w);
