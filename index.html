@@ -1209,10 +1209,12 @@ function renderTiktok(container, category, date, prevDate) {
     options: chartOpts('%', true)
   });
 
-  // 추이
+  // 추이 (선택한 날짜 기준 최근 12주)
   const top5 = sorted.slice(0, 5);
   const trendColors = ['#3b82f6','#f59e0b','#a78bfa','#10b981','#f472b6'];
-  const dates = Object.keys(catData).sort();
+  const allDates = Object.keys(catData).sort();
+  const dateEndIdx = allDates.indexOf(date);
+  const dates = dateEndIdx >= 0 ? allDates.slice(Math.max(0, dateEndIdx - 11), dateEndIdx + 1) : allDates.slice(-12);
   charts.ttTrend = new Chart(document.getElementById('ttTrend'), {
     type: 'line',
     data: {
@@ -1243,7 +1245,10 @@ function renderTiktok(container, category, date, prevDate) {
     if (viewsGroupsR) {
       const dwC = DATA.delta_weekly;
       const catBarColors = ['#3b82f6','#f59e0b','#a78bfa','#10b981','#f472b6','#ef4444','#06b6d4','#8b5cf6','#ec4899','#14b8a6'];
-      const wLabelsC = dwC.weeks.map(w => dwC.week_labels[w] ? dwC.week_labels[w].split('~')[1] : w);
+      const dwEndIdx = currentIdx < dwC.weeks.length ? currentIdx + 1 : dwC.weeks.length;
+      const dwStartIdx = Math.max(0, dwEndIdx - 12);
+      const slicedWeeks = dwC.weeks.slice(dwStartIdx, dwEndIdx);
+      const wLabelsC = slicedWeeks.map(w => dwC.week_labels[w] ? dwC.week_labels[w].split('~')[1] : w);
       let vwIdx = 0;
       for (const [label, members] of Object.entries(viewsGroupsR)) {
         const available = members.filter(m => dwC.views[m]);
@@ -1256,7 +1261,7 @@ function renderTiktok(container, category, date, prevDate) {
               labels: wLabelsC,
               datasets: available.map((m, mi) => ({
                 label: m,
-                data: dwC.views[m].map(v => Math.round(v / 100000000 * 10) / 10),
+                data: dwC.views[m].slice(dwStartIdx, dwEndIdx).map(v => Math.round(v / 100000000 * 10) / 10),
                 borderColor: catBarColors[mi % catBarColors.length],
                 backgroundColor: catBarColors[mi % catBarColors.length] + '15',
                 fill: false,
@@ -1286,7 +1291,10 @@ function renderTiktok(container, category, date, prevDate) {
       'YG+': ['blackpink','treasure','babymonster','alldayproject','gidle']
     };
     const barColors = ['#3b82f6','#f59e0b','#a78bfa','#10b981','#f472b6','#ef4444','#06b6d4','#8b5cf6','#ec4899'];
-    const wLabels = dw.weeks.map(w => dw.week_labels[w] ? dw.week_labels[w].split('~')[1] : w);
+    const dwEndIdx2 = currentIdx < dw.weeks.length ? currentIdx + 1 : dw.weeks.length;
+    const dwStartIdx2 = Math.max(0, dwEndIdx2 - 12);
+    const slicedWeeks2 = dw.weeks.slice(dwStartIdx2, dwEndIdx2);
+    const wLabels = slicedWeeks2.map(w => dw.week_labels[w] ? dw.week_labels[w].split('~')[1] : w);
     let vIdx = 0;
     for (const [grp, members] of Object.entries(viewsIdolGroups)) {
       const available = members.filter(m => dw.views[m]);
@@ -1299,7 +1307,7 @@ function renderTiktok(container, category, date, prevDate) {
             labels: wLabels,
             datasets: available.map((m, mi) => ({
               label: m,
-              data: dw.views[m].map(v => Math.round(v / 100000000 * 10) / 10),
+              data: dw.views[m].slice(dwStartIdx2, dwEndIdx2).map(v => Math.round(v / 100000000 * 10) / 10),
               borderColor: barColors[mi % barColors.length],
               backgroundColor: barColors[mi % barColors.length] + '15',
               fill: false,
