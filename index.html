@@ -1002,7 +1002,11 @@ function renderSpotify(container, date, prevDate) {
   // 그룹별 4주 증감 차트 (선택 날짜 기준 동적 계산)
   const spDateIdx = WEEKLY_DATES.indexOf(date);
   const sp4wDates = spDateIdx >= 4 ? WEEKLY_DATES.slice(spDateIdx - 4, spDateIdx + 1) : WEEKLY_DATES.slice(0, Math.min(5, WEEKLY_DATES.length));
-  const weekLabels = sp4wDates.length >= 5 ? ['W-3', 'W-2', 'W-1', 'W0'] : sp4wDates.slice(1).map((_, i) => `W${i - sp4wDates.length + 2}`);
+  const weekLabels = sp4wDates.slice(1).map((d, i) => {
+    const prev = new Date(sp4wDates[i]);
+    const curr = new Date(d);
+    return `${prev.getMonth()+1}/${prev.getDate()}~${curr.getMonth()+1}/${curr.getDate()}`;
+  });
   const barColors = ['#3b82f6','#f59e0b','#a78bfa','#10b981','#f472b6','#22d3ee','#ef4444','#06b6d4','#84cc16','#e879f9','#fb923c','#14b8a6'];
   
   fourWeekGroups.forEach(g => {
