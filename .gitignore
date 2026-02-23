@@ -1,0 +1,7 @@
+*.xlsx
+*.py
+*.pyc
+*.bat
+__pycache__/
+*_backup.html
+*_local_backup.html
