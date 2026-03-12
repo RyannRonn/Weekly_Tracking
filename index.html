@@ -1202,7 +1202,7 @@ function renderTiktok(container, category, date, prevDate) {
       for (const [grp, members] of Object.entries(viewsIdolGroups)) {
         const available = members.filter(m => dw.views[m]);
         if (!available.length) continue;
-        html += `<div class="chart-card"><div class="chart-title">📺 ${grp} - 일별 Views 순증 (백만)</div><div class="chart-wrap"><canvas id="ttViews${vIdx}"></canvas></div></div>`;
+        html += `<div class="chart-card" style="grid-column:1/-1"><div class="chart-title">📺 ${grp} - 일별 Views 순증 (백만)</div><div class="chart-wrap" style="height:280px"><canvas id="ttViews${vIdx}"></canvas></div></div>`;
         vIdx++;
       }
       html += '</div>';
