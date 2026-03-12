@@ -1147,7 +1147,7 @@ function renderTiktok(container, category, date, prevDate) {
 
   // Views 일별 순증 차트 (delta_weekly 데이터 활용)
   const viewsCategoryMap = {
-    'food': { '🔥 식품 - Views 누적 순증': ['buldak','buldakcarbonara'] },
+    'food': { '🔥 식품 - Views 합산 순증': ['buldak','buldakcarbonara'] },
     'cosmetics': 'dynamic_top10',
     'idol': null
   };
@@ -1202,7 +1202,7 @@ function renderTiktok(container, category, date, prevDate) {
       for (const [grp, members] of Object.entries(viewsIdolGroups)) {
         const available = members.filter(m => dw.views[m]);
         if (!available.length) continue;
-        html += `<div class="chart-card" style="grid-column:1/-1"><div class="chart-title">📺 ${grp} - Views 누적 순증 (백만)</div><div class="chart-wrap" style="height:280px"><canvas id="ttViews${vIdx}"></canvas></div></div>`;
+        html += `<div class="chart-card" style="grid-column:1/-1"><div class="chart-title">📺 ${grp} - Views 합산 순증 (백만)</div><div class="chart-wrap" style="height:280px"><canvas id="ttViews${vIdx}"></canvas></div></div>`;
         vIdx++;
       }
       html += '</div>';
@@ -1299,10 +1299,10 @@ function renderTiktok(container, category, date, prevDate) {
     options: { ...chartOpts('', false), plugins: { legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 } } } } }
   });
 
-  // Views 차트 (식품=누적, 화장품=일별)
+  // Views 차트 (식품=stacked area, 화장품=일별 line)
   if (DATA.delta_weekly && DATA.delta_weekly.views) {
     let viewsGroupsR = null;
-    const isCumulative = (category === 'food');
+    const isStacked = (category === 'food');
     if (viewsCategoryMap[category] === 'dynamic_top10') {
       const top10Names = deltaSorted.slice(0, 10).map(s => s.name);
       const availTop10 = top10Names.filter(n => DATA.delta_weekly.views[n]);
@@ -1328,24 +1328,29 @@ function renderTiktok(container, category, date, prevDate) {
             type: 'line',
             data: {
               labels: wLabelsC,
-              datasets: available.map((m, mi) => {
-                const raw = dwC.views[m].slice(dwStartIdx, dwEndIdx).map(v => Math.round(v / 1e6 * 10) / 10);
-                let plotData = raw;
-                if (isCumulative) { let s=0; plotData = raw.map(v => { s+=v; return Math.round(s*10)/10; }); }
-                return {
-                  label: m,
-                  data: plotData,
-                  borderColor: catBarColors[mi % catBarColors.length],
-                  backgroundColor: catBarColors[mi % catBarColors.length] + '15',
-                  fill: false,
-                  tension: 0.3,
-                  pointRadius: 1,
-                  pointBackgroundColor: catBarColors[mi % catBarColors.length],
-                };
-              })
+              datasets: available.map((m, mi) => ({
+                label: m,
+                data: dwC.views[m].slice(dwStartIdx, dwEndIdx).map(v => Math.round(v / 1e6 * 10) / 10),
+                borderColor: catBarColors[mi % catBarColors.length],
+                backgroundColor: catBarColors[mi % catBarColors.length] + (isStacked ? '40' : '15'),
+                fill: isStacked,
+                tension: 0.3,
+                pointRadius: isStacked ? 0 : 1,
+                borderWidth: isStacked ? 1 : 2,
+                pointBackgroundColor: catBarColors[mi % catBarColors.length],
+              }))
             },
-            options: {
-              ...chartOpts(isCumulative ? 'M (누적)' : 'M', false),
+            options: isStacked ? {
+              responsive: true, maintainAspectRatio: false,
+              interaction: { mode: 'index', intersect: false },
+              scales: {
+                x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 }, maxTicksLimit: 12 } },
+                y: { stacked: true, grid: { color: '#1e2d4a' }, ticks: { color: '#64748b', callback: v => v + 'M' } }
+              },
+              plugins: { legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } },
+                tooltip: { mode: 'index', intersect: false } }
+            } : {
+              ...chartOpts('M', false),
               plugins: { legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } } }
             }
           });
@@ -1355,7 +1360,7 @@ function renderTiktok(container, category, date, prevDate) {
     }
   }
 
-  // Views 누적 순증 차트 (엔터 전용)
+  // Views 순증 stacked area 차트 (엔터 전용)
   if (category === 'idol' && DATA.delta_weekly && DATA.delta_weekly.views) {
     const dw = DATA.delta_weekly;
     const viewsIdolGroups = {
@@ -1380,24 +1385,26 @@ function renderTiktok(container, category, date, prevDate) {
           type: 'line',
           data: {
             labels: wLabels,
-            datasets: available.map((m, mi) => {
-              const raw = dw.views[m].slice(dwStartIdx2, dwEndIdx2).map(v => Math.round(v / 1e6 * 10) / 10);
-              let s=0; const plotData = raw.map(v => { s+=v; return Math.round(s*10)/10; });
-              return {
-                label: m,
-                data: plotData,
-                borderColor: barColors[mi % barColors.length],
-                backgroundColor: barColors[mi % barColors.length] + '15',
-                fill: false,
-                tension: 0.3,
-                pointRadius: 1,
-                pointBackgroundColor: barColors[mi % barColors.length],
-              };
-            })
+            datasets: available.map((m, mi) => ({
+              label: m,
+              data: dw.views[m].slice(dwStartIdx2, dwEndIdx2).map(v => Math.round(v / 1e6 * 10) / 10),
+              borderColor: barColors[mi % barColors.length],
+              backgroundColor: barColors[mi % barColors.length] + '40',
+              fill: true,
+              tension: 0.3,
+              pointRadius: 0,
+              borderWidth: 1,
+            }))
           },
           options: {
-            ...chartOpts('M (누적)', false),
-            plugins: { legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } } }
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+              x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 }, maxTicksLimit: 12 } },
+              y: { stacked: true, grid: { color: '#1e2d4a' }, ticks: { color: '#64748b', callback: v => v + 'M' } }
+            },
+            plugins: { legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } },
+              tooltip: { mode: 'index', intersect: false } }
           }
         });
       }
