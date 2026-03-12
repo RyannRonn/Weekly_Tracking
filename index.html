@@ -671,7 +671,7 @@ function showSearchResult(key, category) {
   // Chart 2: Views 일별 순증
   const viewDayCount = DATA.delta_weekly ? DATA.delta_weekly.weeks.length : 0;
   html += `<div class="search-section">
-    <div class="search-section-title">👁️ Views 일별 순증 (${viewDayCount}일, 억)</div>
+    <div class="search-section-title">👁️ Views 일별 순증 (${viewDayCount}일, 백만)</div>
     <div class="search-chart-wrap"><canvas id="searchViews12"></canvas></div>
   </div>`;
 
@@ -770,14 +770,14 @@ function renderSearchViews12(key) {
   }
 
   const weekLabels = dw.weeks.map(w => dw.week_labels[w] || '');
-  const viewsData = dw.views[vKey].map(v => Math.round(v / 1e8 * 10) / 10);
+  const viewsData = dw.views[vKey].map(v => Math.round(v / 1e6 * 10) / 10);
 
   charts['searchViews12'] = new Chart(canvas, {
     type: 'line',
     data: {
       labels: weekLabels,
       datasets: [{
-        label: 'Views (억)',
+        label: 'Views (M)',
         data: viewsData,
         borderColor: '#f59e0b',
         backgroundColor: 'rgba(245,158,11,0.1)',
@@ -794,13 +794,13 @@ function renderSearchViews12(key) {
         legend: { display: false },
         tooltip: {
           callbacks: {
-            label: ctx => `${ctx.parsed.y.toFixed(1)}억 views`
+            label: ctx => `${ctx.parsed.y.toFixed(1)}M views`
           }
         }
       },
       scales: {
         x: { ticks: { color: '#64748b', font: { size: 9 }, maxRotation: 45 }, grid: { display: false } },
-        y: { ticks: { color: '#64748b', callback: v => v + '억' }, grid: { color: '#1e2d4a' } }
+        y: { ticks: { color: '#64748b', callback: v => v + 'M' }, grid: { color: '#1e2d4a' } }
       }
     }
   });
@@ -1169,7 +1169,7 @@ function renderTiktok(container, category, date, prevDate) {
       for (const [label, members] of Object.entries(viewsGroups)) {
         const available = members.filter(m => dw.views[m]);
         if (!available.length) continue;
-        html += `<div class="chart-card" style="grid-column:1/-1"><div class="chart-title">📺 ${label} (억)</div><div class="chart-wrap" style="height:280px"><canvas id="ttCatViews${vwIdx}"></canvas></div></div>`;
+        html += `<div class="chart-card" style="grid-column:1/-1"><div class="chart-title">📺 ${label} (백만)</div><div class="chart-wrap" style="height:280px"><canvas id="ttCatViews${vwIdx}"></canvas></div></div>`;
         vwIdx++;
       }
       html += '</div>';
@@ -1202,7 +1202,7 @@ function renderTiktok(container, category, date, prevDate) {
       for (const [grp, members] of Object.entries(viewsIdolGroups)) {
         const available = members.filter(m => dw.views[m]);
         if (!available.length) continue;
-        html += `<div class="chart-card"><div class="chart-title">📺 ${grp} - 일별 Views 순증 (억)</div><div class="chart-wrap"><canvas id="ttViews${vIdx}"></canvas></div></div>`;
+        html += `<div class="chart-card"><div class="chart-title">📺 ${grp} - 일별 Views 순증 (백만)</div><div class="chart-wrap"><canvas id="ttViews${vIdx}"></canvas></div></div>`;
         vIdx++;
       }
       html += '</div>';
@@ -1329,17 +1329,17 @@ function renderTiktok(container, category, date, prevDate) {
               labels: wLabelsC,
               datasets: available.map((m, mi) => ({
                 label: m,
-                data: dwC.views[m].slice(dwStartIdx, dwEndIdx).map(v => Math.round(v / 100000000 * 10) / 10),
+                data: dwC.views[m].slice(dwStartIdx, dwEndIdx).map(v => Math.round(v / 1e6 * 10) / 10),
                 borderColor: catBarColors[mi % catBarColors.length],
                 backgroundColor: catBarColors[mi % catBarColors.length] + '15',
                 fill: false,
                 tension: 0.3,
-                pointRadius: 3,
+                pointRadius: 1,
                 pointBackgroundColor: catBarColors[mi % catBarColors.length],
               }))
             },
             options: {
-              ...chartOpts('억', false),
+              ...chartOpts('M', false),
               plugins: { legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } } }
             }
           });
@@ -1376,17 +1376,17 @@ function renderTiktok(container, category, date, prevDate) {
             labels: wLabels,
             datasets: available.map((m, mi) => ({
               label: m,
-              data: dw.views[m].slice(dwStartIdx2, dwEndIdx2).map(v => Math.round(v / 100000000 * 10) / 10),
+              data: dw.views[m].slice(dwStartIdx2, dwEndIdx2).map(v => Math.round(v / 1e6 * 10) / 10),
               borderColor: barColors[mi % barColors.length],
               backgroundColor: barColors[mi % barColors.length] + '15',
               fill: false,
               tension: 0.3,
-              pointRadius: 3,
+              pointRadius: 1,
               pointBackgroundColor: barColors[mi % barColors.length],
             }))
           },
           options: {
-            ...chartOpts('억', false),
+            ...chartOpts('M', false),
             plugins: { legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } } }
           }
         });
