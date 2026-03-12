@@ -1456,10 +1456,12 @@ function dateToQ(s){var m=parseInt(s.substring(5,7)),y=s.substring(2,4);var q=m<
 function azBuildQ(dates,totals,revSeries){
   var qm={};var rk=Object.keys(revSeries||{});
   dates.forEach(function(d,i){
-    var q=dateToQ(d);if(!qm[q])qm[q]={total:0,products:{}};
-    var t=+totals[i];if(!isNaN(t))qm[q].total+=t;
+    var q=dateToQ(d);if(!qm[q])qm[q]={total:0,products:{},weeks:0};
+    var t=+totals[i];if(!isNaN(t)){qm[q].total+=t;qm[q].weeks++}
     rk.forEach(function(k){if(!qm[q].products[k])qm[q].products[k]=0;var v=+revSeries[k][i];if(!isNaN(v))qm[q].products[k]+=v});
-  });return qm;
+  });
+  Object.keys(qm).forEach(function(q){var w=qm[q].weeks||1;qm[q].total=Math.round(qm[q].total/w);rk.forEach(function(k){if(qm[q].products[k])qm[q].products[k]=Math.round(qm[q].products[k]/w)})});
+  return qm;
 }
 
 function azBuildCD(key){
@@ -1526,10 +1528,11 @@ function azRender(){
   var qMap=cd.quarterly;var qKeys=Object.keys(qMap).filter(function(k){return qMap[k].total>0});
   if(qKeys.length>=2){
     var isAPR=(dataKey==='apr');
-    m.insertAdjacentHTML('beforeend','<div class="az-row az-r1"><div class="az-cd"><div class="az-cd-h"><span class="az-cd-t">분기별 매출</span><span class="az-cd-tag">QUARTERLY</span></div><div class="az-cw"><canvas id="az-c-q"></canvas></div></div></div>');
+    m.insertAdjacentHTML('beforeend','<div class="az-row az-r1"><div class="az-cd"><div class="az-cd-h"><span class="az-cd-t">분기별 주당 평균 매출</span><span class="az-cd-tag">QUARTERLY AVG/WEEK</span></div><div class="az-cw"><canvas id="az-c-q"></canvas></div></div></div>');
     if(isAPR){
-      var qCosm={},qDev={};
-      cd.dates.forEach(function(d,i){var q=dateToQ(d);if(!qCosm[q])qCosm[q]=0;if(!qDev[q])qDev[q]=0;qCosm[q]+=(+cd.cosmTotal[i]||0);qDev[q]+=(+cd.deviceTotal[i]||0)});
+      var qCosm={},qDev={},qW={};
+      cd.dates.forEach(function(d,i){var q=dateToQ(d);if(!qCosm[q])qCosm[q]=0;if(!qDev[q])qDev[q]=0;if(!qW[q])qW[q]=0;qCosm[q]+=(+cd.cosmTotal[i]||0);qDev[q]+=(+cd.deviceTotal[i]||0);qW[q]++});
+      Object.keys(qCosm).forEach(function(q){var w=qW[q]||1;qCosm[q]=Math.round(qCosm[q]/w);qDev[q]=Math.round(qDev[q]/w)});
       azCharts['q']=new Chart(document.getElementById('az-c-q'),{type:'bar',data:{labels:qKeys,datasets:[
         {label:'화장품',data:qKeys.map(function(k){return qCosm[k]||0}),backgroundColor:'#3b82f640',borderColor:'#3b82f6',borderWidth:1,borderRadius:4},
         {label:'기기',data:qKeys.map(function(k){return qDev[k]||0}),backgroundColor:'#8b5cf640',borderColor:'#8b5cf6',borderWidth:1,borderRadius:4}
