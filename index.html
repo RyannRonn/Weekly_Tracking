@@ -388,6 +388,14 @@ body {
   .summary-cards { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* === TikTok Range Selector === */
+.tt-range-sel{display:flex;gap:1px;background:#0e1118;border-radius:6px;padding:2px;border:1px solid var(--border)}
+.tt-range-sel button{background:none;border:none;color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:10px;padding:3px 9px;border-radius:4px;cursor:pointer;transition:all .12s}
+.tt-range-sel button:hover{color:var(--text)}
+.tt-range-sel button.on{color:#e2e8f0;background:var(--surface2)}
+.chart-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.chart-card-header .chart-title{margin-bottom:0}
+
 /* === AMAZON SECTION === */
 #amazon-root{display:none}
 #amazon-root.active{display:block}
@@ -463,6 +471,7 @@ const WEEKLY_DATES = Object.keys(DATA.spotify).sort();
 let currentIdx = WEEKLY_DATES.length - 1;
 let currentTab = 'food';
 let charts = {};
+let ttTrendRange = 12;
 
 let searchMode = false;
 
@@ -1140,8 +1149,17 @@ function renderTiktok(container, category, date, prevDate) {
   // WOW%
   html += `<div class="chart-card"><div class="chart-title">${tabInfo.emoji} 주간 증감률 TOP 10</div><div class="chart-wrap"><canvas id="ttWow"></canvas></div></div>`;
 
-  // 추이 (TOP 5)
-  html += `<div class="chart-card" style="grid-column:1/-1"><div class="chart-title">${tabInfo.emoji} ${tabInfo.label} TOP 5 - 12주 추이 (K)</div><div class="chart-wrap" style="height:280px"><canvas id="ttTrend"></canvas></div></div>`;
+  // 추이 (TOP 5) with range selector
+  const allCatDates = Object.keys(catData).sort();
+  const allDatesCount = allCatDates.length;
+  const hasLongTT = allDatesCount > 16;
+  let ttVr = '<div class="tt-range-sel">';
+  ttVr += `<button class="${ttTrendRange<=12?'on':''}" onclick="ttSetRange(12)">12W</button>`;
+  ttVr += `<button class="${ttTrendRange>12&&ttTrendRange<=24?'on':''}" onclick="ttSetRange(24)">24W</button>`;
+  if(hasLongTT) ttVr += `<button class="${ttTrendRange>24&&ttTrendRange<=40?'on':''}" onclick="ttSetRange(40)">40W</button>`;
+  ttVr += `<button class="${ttTrendRange>=9999?'on':''}" onclick="ttSetRange(9999)">ALL</button>`;
+  ttVr += '</div>';
+  html += `<div class="chart-card" style="grid-column:1/-1"><div class="chart-card-header"><div class="chart-title">${tabInfo.emoji} ${tabInfo.label} TOP 5 추이 (K)</div>${ttVr}</div><div class="chart-wrap" style="height:280px"><canvas id="ttTrend"></canvas></div></div>`;
 
   html += '</div>';
 
@@ -1276,12 +1294,12 @@ function renderTiktok(container, category, date, prevDate) {
     options: chartOpts('%', true)
   });
 
-  // 추이 (선택한 날짜 기준 최근 12주)
+  // 추이 (선택한 날짜 기준 최근 N주)
   const top5 = sorted.slice(0, 5);
   const trendColors = ['#3b82f6','#f59e0b','#a78bfa','#10b981','#f472b6'];
-  const allDates = Object.keys(catData).sort();
-  const dateEndIdx = allDates.indexOf(date);
-  const dates = dateEndIdx >= 0 ? allDates.slice(Math.max(0, dateEndIdx - 11), dateEndIdx + 1) : allDates.slice(-12);
+  const dateEndIdx = allCatDates.indexOf(date);
+  const rng = Math.min(ttTrendRange, allCatDates.length);
+  const dates = dateEndIdx >= 0 ? allCatDates.slice(Math.max(0, dateEndIdx - (rng - 1)), dateEndIdx + 1) : allCatDates.slice(-rng);
   charts.ttTrend = new Chart(document.getElementById('ttTrend'), {
     type: 'line',
     data: {
@@ -1344,7 +1362,7 @@ function renderTiktok(container, category, date, prevDate) {
               responsive: true, maintainAspectRatio: false,
               interaction: { mode: 'index', intersect: false },
               scales: {
-                x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 }, maxTicksLimit: 12 } },
+                x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 }, maxRotation: 45, maxTicksLimit: 30 } },
                 y: { stacked: true, grid: { color: '#1e2d4a' }, ticks: { color: '#64748b', callback: v => v + 'M' } }
               },
               plugins: { legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } },
@@ -1400,7 +1418,7 @@ function renderTiktok(container, category, date, prevDate) {
             responsive: true, maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             scales: {
-              x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 }, maxTicksLimit: 12 } },
+              x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 }, maxRotation: 45, maxTicksLimit: 30 } },
               y: { stacked: true, grid: { color: '#1e2d4a' }, ticks: { color: '#64748b', callback: v => v + 'M' } }
             },
             plugins: { legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } },
@@ -1431,6 +1449,11 @@ function chartOpts(suffix, hideLegend) {
       y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(30,45,74,0.3)' } }
     }
   };
+}
+
+function ttSetRange(n) {
+  ttTrendRange = n;
+  renderContent();
 }
 
 function hexToRgba(hex, a) {
