@@ -1162,7 +1162,7 @@ function renderTiktok(container, category, date, prevDate) {
   html += `<div class="chart-card" style="grid-column:1/-1"><div class="chart-card-header"><div class="chart-title">${tabInfo.emoji} ${tabInfo.label} TOP 5 추이 (K)</div>${ttVr}</div><div class="chart-wrap" style="height:280px"><canvas id="ttTrend"></canvas></div></div>`;
 
   // TOP 5 WoW 증가량 + 증가율 복합 차트
-  html += `<div class="chart-card" style="grid-column:1/-1"><div class="chart-card-header"><div class="chart-title">${tabInfo.emoji} ${tabInfo.label} TOP 5 WoW 증가량 & 증가율</div>${ttVr.replace(/ttSetRange/g,'ttSetRange')}</div><div class="chart-wrap" style="height:320px"><canvas id="ttTop5Wow"></canvas></div></div>`;
+  html += `<div class="chart-card" style="grid-column:1/-1"><div class="chart-card-header"><div class="chart-title">${tabInfo.emoji} ${tabInfo.label} TOP 5 WoW 증가량 & 증가율 <span style="font-size:11px;color:#64748b;font-weight:400">  ■ 막대=증가량(좌)  --- 점선=증가율%(우)</span></div>${ttVr.replace(/ttSetRange/g,'ttSetRange')}</div><div class="chart-wrap" style="height:320px"><canvas id="ttTop5Wow"></canvas></div></div>`;
 
   html += '</div>';
 
@@ -1399,8 +1399,8 @@ function renderTiktok(container, category, date, prevDate) {
         return { delta, pct };
       });
       wowDeltaData.push({
-        label: t.name + ' (증가량)',
-        data: vals.map(v => v.delta != null ? Math.round(v.delta / 1e3 * 10) / 10 : null),
+        label: t.name,
+        data: vals.map(v => v.delta != null ? Math.round(v.delta * 10) / 10 : null),
         type: 'bar',
         backgroundColor: wowBarColors[i] + '80',
         borderColor: wowBarColors[i],
@@ -1410,7 +1410,7 @@ function renderTiktok(container, category, date, prevDate) {
         order: 2,
       });
       wowPctData.push({
-        label: t.name + ' (증가율%)',
+        label: t.name + ' %',
         data: vals.map(v => v.pct),
         type: 'line',
         borderColor: wowBarColors[i],
@@ -1435,12 +1435,12 @@ function renderTiktok(container, category, date, prevDate) {
         interaction: { mode: 'index', intersect: false },
         scales: {
           x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 }, maxRotation: 45, maxTicksLimit: 30 } },
-          y: { position: 'left', grid: { color: '#1e2d4a' }, ticks: { color: '#64748b', callback: v => v + 'K' }, title: { display: true, text: 'WoW 증가량 (K)', color: '#94a3b8', font: { size: 10 } } },
-          y1: { position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#64748b', callback: v => v + '%' }, title: { display: true, text: 'WoW 증가율 (%)', color: '#94a3b8', font: { size: 10 } } }
+          y: { position: 'left', grid: { color: '#1e2d4a' }, ticks: { color: '#64748b', callback: v => v + 'K' }, title: { display: true, text: 'WoW 증가량', color: '#94a3b8', font: { size: 10 } } },
+          y1: { position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#64748b', callback: v => v + '%' }, title: { display: true, text: 'WoW 증가율', color: '#94a3b8', font: { size: 10 } } }
         },
         plugins: {
-          legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { size: 9 }, usePointStyle: true, padding: 10 } },
-          tooltip: { mode: 'index', intersect: false, callbacks: { label: function(c) { return c.dataset.label + ': ' + (c.parsed.y != null ? c.parsed.y + (c.dataset.yAxisID === 'y1' ? '%' : 'K') : '-'); } } }
+          legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { size: 9 }, usePointStyle: true, padding: 10, filter: function(item) { return !item.text.endsWith('%'); } } },
+          tooltip: { mode: 'index', intersect: false, callbacks: { label: function(c) { return c.dataset.label + ': ' + (c.parsed.y != null ? c.parsed.y + (c.dataset.yAxisID === 'y1' ? '%' : '') : '-'); } } }
         }
       }
     });
