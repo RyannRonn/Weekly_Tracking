@@ -1502,7 +1502,7 @@ function renderTiktok(container, category, date, prevDate) {
       'cosmetics': 'dynamic_top10',
     };
     let videosGroupsR = null;
-    const isStackedVid = true;
+    const isStackedVid = (category === 'food');
     if (videosCatMap2[category] === 'dynamic_top10') {
       const top10Names = deltaSorted.slice(0, 10).map(s => s.name);
       const availTop10 = top10Names.filter(n => dwV.videos[n]);
