@@ -1149,7 +1149,8 @@ function renderTiktok(container, category, date, prevDate) {
   // WOW%
   html += `<div class="chart-card"><div class="chart-title">${tabInfo.emoji} 주간 증감률 TOP 10</div><div class="chart-wrap"><canvas id="ttWow"></canvas></div></div>`;
 
-  // 추이 (TOP 5) with range selector
+  // 추이 (TOP N) with range selector
+  const topN = category === 'food' ? 5 : 10;
   const allCatDates = Object.keys(catData).sort();
   const allDatesCount = allCatDates.length;
   const hasLongTT = allDatesCount > 16;
@@ -1159,10 +1160,10 @@ function renderTiktok(container, category, date, prevDate) {
   if(hasLongTT) ttVr += `<button class="${ttTrendRange>24&&ttTrendRange<=40?'on':''}" onclick="ttSetRange(40)">40W</button>`;
   ttVr += `<button class="${ttTrendRange>=9999?'on':''}" onclick="ttSetRange(9999)">ALL</button>`;
   ttVr += '</div>';
-  html += `<div class="chart-card" style="grid-column:1/-1"><div class="chart-card-header"><div class="chart-title">${tabInfo.emoji} ${tabInfo.label} TOP 5 추이 (K)</div>${ttVr}</div><div class="chart-wrap" style="height:280px"><canvas id="ttTrend"></canvas></div></div>`;
+  html += `<div class="chart-card" style="grid-column:1/-1"><div class="chart-card-header"><div class="chart-title">${tabInfo.emoji} ${tabInfo.label} TOP ${topN} 추이 (K)</div>${ttVr}</div><div class="chart-wrap" style="height:280px"><canvas id="ttTrend"></canvas></div></div>`;
 
-  // TOP 5 WoW 증가량 + 증가율 복합 차트
-  html += `<div class="chart-card" style="grid-column:1/-1"><div class="chart-card-header"><div class="chart-title">${tabInfo.emoji} ${tabInfo.label} TOP 5 WoW 증가량 & 증가율 <span style="font-size:11px;color:#64748b;font-weight:400">  ■ 막대=증가량(좌)  --- 점선=증가율%(우)</span></div>${ttVr.replace(/ttSetRange/g,'ttSetRange')}</div><div class="chart-wrap" style="height:320px"><canvas id="ttTop5Wow"></canvas></div></div>`;
+  // TOP N WoW 증가량 + 증가율 복합 차트
+  html += `<div class="chart-card" style="grid-column:1/-1"><div class="chart-card-header"><div class="chart-title">${tabInfo.emoji} ${tabInfo.label} TOP ${topN} WoW 증가량 & 증가율 <span style="font-size:11px;color:#64748b;font-weight:400">  ■ 막대=증가량(좌)  --- 점선=증가율%(우)</span></div>${ttVr.replace(/ttSetRange/g,'ttSetRange')}</div><div class="chart-wrap" style="height:320px"><canvas id="ttTop5Wow"></canvas></div></div>`;
 
   html += '</div>';
 
@@ -1360,8 +1361,8 @@ function renderTiktok(container, category, date, prevDate) {
   });
 
   // 추이 (선택한 날짜 기준 최근 N주)
-  const top5 = sorted.slice(0, 5);
-  const trendColors = ['#3b82f6','#f59e0b','#a78bfa','#10b981','#f472b6'];
+  const top5 = sorted.slice(0, topN);
+  const trendColors = ['#3b82f6','#f59e0b','#a78bfa','#10b981','#f472b6','#ef4444','#06b6d4','#eab308','#ec4899','#14b8a6'];
   const dateEndIdx = allCatDates.indexOf(date);
   const rng = Math.min(ttTrendRange, allCatDates.length);
   const dates = dateEndIdx >= 0 ? allCatDates.slice(Math.max(0, dateEndIdx - (rng - 1)), dateEndIdx + 1) : allCatDates.slice(-rng);
@@ -1385,7 +1386,7 @@ function renderTiktok(container, category, date, prevDate) {
   // TOP 5 WoW 증가량(막대) + 증가율(라인) 복합 차트
   const wowEl = document.getElementById('ttTop5Wow');
   if (wowEl && top5.length) {
-    const wowBarColors = ['#3b82f6','#f59e0b','#a78bfa','#10b981','#f472b6'];
+    const wowBarColors = ['#3b82f6','#f59e0b','#a78bfa','#10b981','#f472b6','#ef4444','#06b6d4','#eab308','#ec4899','#14b8a6'];
     const wowDeltaData = [];
     const wowPctData = [];
     top5.forEach((t, i) => {
