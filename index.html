@@ -1163,7 +1163,7 @@ function renderTiktok(container, category, date, prevDate) {
   html += `<div class="chart-card" style="grid-column:1/-1"><div class="chart-card-header"><div class="chart-title">${tabInfo.emoji} ${tabInfo.label} TOP ${topN} 추이 (K)</div>${ttVr}</div><div class="chart-wrap" style="height:280px"><canvas id="ttTrend"></canvas></div></div>`;
 
   // TOP N WoW 증가량 + 증가율 복합 차트
-  html += `<div class="chart-card" style="grid-column:1/-1"><div class="chart-card-header"><div class="chart-title">${tabInfo.emoji} ${tabInfo.label} TOP ${topN} WoW 증가량 & 증가율 <span style="font-size:11px;color:#64748b;font-weight:400">  ■ 막대=증가량(좌)  --- 점선=증가율%(우)</span></div>${ttVr.replace(/ttSetRange/g,'ttSetRange')}</div><div class="chart-wrap" style="height:320px"><canvas id="ttTop5Wow"></canvas></div></div>`;
+  html += `<div class="chart-card" style="grid-column:1/-1"><div class="chart-card-header"><div class="chart-title">${tabInfo.emoji} ${tabInfo.label} TOP ${topN} WoW <span style="font-size:11px;color:#64748b;font-weight:400">  ■ 막대=증가량(좌)  --- 점선=증가율%(우)</span></div>${ttVr.replace(/ttSetRange/g,'ttSetRange')}</div><div class="chart-wrap" style="height:320px"><canvas id="ttTop5Wow"></canvas></div></div>`;
 
   html += '</div>';
 
