@@ -398,7 +398,7 @@ body {
 
 /* === AMAZON SECTION === */
 #amazon-root{display:none}
-#amazon-root.active{display:block}
+#amazon-root.active{display:block;max-width:1200px;margin:0 auto}
 #amazon-root .az-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px;margin-bottom:18px}
 #amazon-root .az-st{background:#13161f;border:1px solid #1e2436;border-radius:10px;padding:13px 15px;transition:border-color .15s}
 #amazon-root .az-st:hover{border-color:#2a3350}
@@ -409,8 +409,6 @@ body {
 #amazon-root .az-dn{color:#ef4444}
 #amazon-root .az-row{display:grid;gap:14px;margin-bottom:14px}
 #amazon-root .az-r1{grid-template-columns:1fr}
-#amazon-root .az-r3{grid-template-columns:2fr 1fr}
-@media(max-width:960px){#amazon-root .az-r3{grid-template-columns:1fr}}
 #amazon-root .az-cd{background:#13161f;border:1px solid #1e2436;border-radius:12px;padding:18px;transition:border-color .15s}
 #amazon-root .az-cd:hover{border-color:#2a3350}
 #amazon-root .az-cd-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
@@ -2978,9 +2976,9 @@ function azRender(){
   if(hasLong)vr+='<button class="'+(rng>20&&rng<=40?'on':'')+'" onclick="azSetRange(40,this)">40W</button>';
   vr+='<button class="'+(rng>=n?'on':'')+'" onclick="azSetRange(9999,this)">ALL</button></div>';
 
-  m.insertAdjacentHTML('beforeend','<div class="az-row az-r3"><div class="az-cd"><div class="az-cd-h"><span class="az-cd-t">주간 총매출 추이</span>'+vr+'</div><div class="az-cw az-cw-l"><canvas id="az-c-total"></canvas></div></div><div class="az-cd"><div class="az-cd-h"><span class="az-cd-t">WoW 변동률</span></div><div class="az-cw az-cw-l"><canvas id="az-c-wow"></canvas></div></div></div>');
+  m.insertAdjacentHTML('beforeend','<div class="az-row az-r1"><div class="az-cd"><div class="az-cd-h"><span class="az-cd-t">주간 총매출 추이</span>'+vr+'</div><div class="az-cw az-cw-l"><canvas id="az-c-total"></canvas></div></div></div>');
   m.insertAdjacentHTML('beforeend','<div class="az-row az-r1"><div class="az-cd"><div class="az-cd-h"><span class="az-cd-t">제품별 매출 추이</span></div><div class="az-cw az-cw-l"><canvas id="az-c-rev"></canvas></div></div></div>');
-  azDrawTotal(cd,rng);azDrawRev(cd,rng);azDrawWow(cd,rng);
+  azDrawTotal(cd,rng);azDrawRev(cd,rng);
 
   // Quarterly
   var qMap=cd.quarterly;var qKeys=Object.keys(qMap).filter(function(k){return qMap[k].total>0});
@@ -3022,12 +3020,6 @@ function azDrawTotal(cd,rng){
 function azDrawRev(cd,rng){
   azDc('rev');var dates=fmtDateLabels(azSl(cd.dates,rng));var rk=Object.keys(cd.revSeries);
   azCharts['rev']=new Chart(document.getElementById('az-c-rev'),{type:'bar',data:{labels:dates,datasets:rk.map(function(k,i){return{label:k,data:azSl(cd.revSeries[k],rng),backgroundColor:AC[i%AC.length]+'40',borderColor:AC[i%AC.length],borderWidth:1,borderRadius:2}})},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},scales:{x:{stacked:true,grid:{display:false},ticks:{maxTicksLimit:12}},y:{stacked:true,grid:{color:'rgba(30,36,54,.4)'},ticks:{callback:function(v){return azFmt(v)}}}},plugins:{legend:{display:true,labels:{color:'#8a93a8',usePointStyle:true,pointStyle:'rect',padding:14,font:{size:10}}},tooltip:Object.assign({},atip,{callbacks:{label:function(c){return c.dataset.label+': '+azFmt(c.parsed.y)}}})}}});
-}
-
-function azDrawWow(cd,rng){
-  azDc('wow');var dates=fmtDateLabels(azSl(cd.dates,rng));
-  var wows=azSl(cd.wow,rng).map(function(v){return v!=null?v*100:null});
-  azCharts['wow']=new Chart(document.getElementById('az-c-wow'),{type:'bar',data:{labels:dates,datasets:[{data:wows,backgroundColor:wows.map(function(v){return v==null?'transparent':v>=0?'#10b98140':'#ef444440'}),borderColor:wows.map(function(v){return v==null?'transparent':v>=0?'#10b981':'#ef4444'}),borderWidth:1,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{display:false},ticks:{maxTicksLimit:12}},y:{grid:{color:'rgba(30,36,54,.4)'},ticks:{callback:function(v){return v.toFixed(0)+'%'}}}},plugins:{tooltip:Object.assign({},atip,{callbacks:{label:function(c){return(c.parsed.y>=0?'+':'')+c.parsed.y.toFixed(1)+'%'}}})}}});
 }
 
 function azDrawTable(m,cd){
